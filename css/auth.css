@@ -1,0 +1,232 @@
+/* ========== auth.css (Polished, minimal + futuristic) ========== */
+
+/* ----------------------------------------------
+   GLOBAL AUTH PAGE STRUCTURE
+------------------------------------------------ */
+
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+.auth-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+  padding: 2.5rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(0,0,0,0.35);
+  animation: fadeIn 0.35s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----------------------------------------------
+   HEADERS
+------------------------------------------------ */
+
+.auth-card h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.7rem;
+  letter-spacing: -0.3px;
+}
+
+.auth-card p {
+  margin: 0 0 1.6rem;
+  opacity: 0.75;
+}
+
+/* ----------------------------------------------
+   FORM FIELDS (Vertical, clean)
+------------------------------------------------ */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  margin-left: 2px;
+}
+
+/* Inputs & selects share a unified futuristic look */
+
+.auth-form input,
+.auth-form select {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 1rem;
+  transition: border 0.2s ease, background 0.2s ease;
+}
+
+.auth-form input:focus,
+.auth-form select:focus {
+  outline: none;
+  background: rgba(255,255,255,0.12);
+  border-color: #4d8bff;
+}
+
+/* ----------------------------------------------
+   PASSWORD BOX (Supervisor key)
+------------------------------------------------ */
+
+.password-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.password-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.9rem 1rem;
+}
+
+.password-box input:focus {
+  border: none;
+  outline: none;
+}
+
+.eye-btn {
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: #fff;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.eye-btn:hover {
+  opacity: 1;
+}
+
+/* ----------------------------------------------
+   BUTTONS
+------------------------------------------------ */
+
+.btn-primary {
+  width: 100%;
+  padding: 0.9rem;
+  border-radius: 10px;
+  background: #4d8bff;
+  border: none;
+  cursor: pointer;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: #3a73da;
+}
+
+.btn-link {
+  color: #4d8bff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------
+   INLINE RESULT / NOTICE
+------------------------------------------------ */
+
+#result {
+  margin-top: 0.5rem;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+  text-align: center;
+}
+
+.notice-ok {
+  color: #19da7a;
+  font-weight: 700;
+}
+
+.notice-err {
+  color: #ff7181;
+  font-weight: 700;
+}
+
+/* ----------------------------------------------
+   OTP GRID (verify-otp)
+------------------------------------------------ */
+
+.otp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+
+.otp-cell {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  padding: 0.65rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.otp-cell:focus {
+  outline: none;
+  border-color: #4d8bff;
+  box-shadow: 0 0 0 3px rgba(77, 139, 255, 0.3);
+}
+
+/* ----------------------------------------------
+   LINKS / FOOTER
+------------------------------------------------ */
+
+.auth-footer {
+  text-align: center;
+  margin-top: 30px;
+  opacity: 0.5;
+  font-size: 0.85rem;
+}
+
+/* ----------------------------------------------
+   MOBILE BEHAVIOR
+------------------------------------------------ */
+
+@media (max-width: 520px) {
+  .auth-card {
+    padding: 2rem;
+  }
+  .btn-primary {
+    width: 100%;
+  }
+}

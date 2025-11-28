@@ -1,0 +1,10 @@
+[functions]
+
+  [functions.start-verify]
+  verify_jwt = false
+
+  [functions.check-verify]
+  verify_jwt = false
+
+  [functions.finalize-signup]
+  verify_jwt = false

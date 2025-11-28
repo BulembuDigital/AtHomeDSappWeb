@@ -1,0 +1,92 @@
+/* ui-sparkle.css — transitions, skeletons, and a top progress bar */
+
+/* ---- Theme-aware variables (re-use your base colors) ---- */
+:root {
+  --ui-text: var(--text, #e7e9ee);
+  --ui-muted: var(--muted, #9aa3b2);
+  --ui-surface: var(--surface, rgba(255,255,255,.06));
+  --ui-border: var(--border, rgba(255,255,255,.14));
+  --ui-accent: var(--accent, #3b82f6);   /* blue */
+  --ui-accent-2: var(--accent-2, #ef4444); /* red */
+  --ui-glass: var(--glass, rgba(255,255,255,.02));
+}
+
+/* ---- Soft page transition container ---- */
+.soft-page {
+  opacity: 0;
+  transform: translateY(6px) scale(0.995);
+  filter: blur(.3px);
+  transition:
+    opacity .28s ease,
+    transform .28s ease,
+    filter .28s ease;
+}
+.soft-page.is-ready {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+/* ---- Fade overlay (used on soft navigation) ---- */
+.ui-fade {
+  position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,.18), transparent 40%),
+              linear-gradient(180deg, rgba(0,0,0,.22), transparent 30%);
+  opacity: 0; transition: opacity .22s ease;
+  z-index: 40;
+}
+.ui-fade.show { opacity: 1; }
+
+/* ---- Top progress bar ---- */
+#top-progress {
+  position: fixed; left: 0; top: 0; height: 2px; width: 0%;
+  background:
+    linear-gradient(90deg, var(--ui-accent), var(--ui-accent-2));
+  box-shadow: 0 0 18px rgba(59,130,246,.45);
+  z-index: 50; transition: width .18s ease;
+}
+#top-progress.is-active { width: 70%; } /* auto mode settles here first */
+#top-progress.is-done   { width: 100%; }
+
+/* ---- Skeleton shimmer ---- */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  position: relative; overflow: hidden; border-radius: 12px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,.06) 0%,
+    rgba(255,255,255,.12) 20%,
+    rgba(255,255,255,.06) 40% );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite linear;
+  border: 1px solid var(--ui-border);
+}
+.sk-card     { height: 96px; }
+.sk-row      { height: 14px; border-radius: 999px; }
+.sk-row.sm   { height: 10px; opacity: .7; }
+.sk-row.lg   { height: 18px; }
+.sk-avatar   { width: 44px; height: 44px; border-radius: 50%; }
+.sk-media    { height: 180px; border-radius: 14px; }
+
+.skel-stack { display: grid; gap: 10px; }
+.skel-list  { display: grid; gap: 12px; }
+.skel-inline{ display: flex; align-items: center; gap: 12px; }
+
+/* Containers that look like your cards */
+.skeleton-card {
+  padding: 14px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border: 1px solid var(--ui-border);
+}
+
+/* Optional tiny pulse for icons/buttons becoming ready */
+.ready-pulse {
+  animation: readyPulse .8s ease 1;
+}
+@keyframes readyPulse {
+  0% { transform: scale(.98); box-shadow: 0 0 0 rgba(59,130,246,.0); }
+  60% { transform: scale(1.01); box-shadow: 0 0 18px rgba(59,130,246,.35); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(59,130,246,.0); }
+}

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create your account · At Home Driving School</title>
+
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/auth.css">
+
+  <style>
+    /* --- FIX LABEL ALIGNMENT --- */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .field span {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      margin-left: 2px;
+      position: static !important; /* stops floating label bug */
+      transform: none !important;
+    }
+
+    .auth-card {
+      max-width: 420px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2.5rem;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 0 40px rgba(0,0,0,0.35);
+    }
+
+    .auth-form input,
+    .auth-form select {
+      width: 100%;
+      padding: 0.9rem 1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .auth-form input:focus,
+    .auth-form select:focus {
+      outline: none;
+      border-color: #4d8bff;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .auth-card h1 {
+      margin-bottom: 0.4rem;
+      font-size: 1.7rem;
+      letter-spacing: -0.3px;
+    }
+
+    p {
+      margin-bottom: 1.5rem;
+      opacity: 0.7;
+    }
+
+    #result {
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    #supKeyWrap small {
+      opacity: 0.6;
+      font-size: 0.75rem;
+    }
+
+    /* Center the whole page */
+    .auth-container {
+      min-height: calc(100vh - 120px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-top: 30px;
+    }
+
+    .auth-header {
+      margin: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-primary {
+      margin-top: 1rem;
+      width: 100%;
+      padding: 0.9rem;
+      border-radius: 10px;
+      background: #4d8bff;
+      border: none;
+      cursor: pointer;
+      color: white;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #3a73da;
+    }
+
+    footer {
+      text-align: center;
+      opacity: 0.5;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="splash" class="splash hidden"></div>
+
+  <header class="auth-header">
+    <div class="brand">At Home Driving School</div>
+    <button id="themeToggle" class="theme-btn" aria-label="Toggle theme">🌓</button>
+    <a href="./login.html" class="btn-link">Log in</a>
+  </header>
+
+  <main class="auth-container">
+    <section class="auth-card">
+      <h1>Create your account</h1>
+      <p>We’ll email you a secure sign-in link.</p>
+
+      <form id="signupForm" class="auth-form" novalidate>
+
+        <label class="field">
+          <span>Full name</span>
+          <input id="name" type="text" autocomplete="name" required />
+        </label>
+
+        <label class="field">
+          <span>Email</span>
+          <input id="email" type="email" autocomplete="email" required />
+        </label>
+
+        <label class="field">
+          <span>Phone (international)</span>
+          <input id="phone" type="text" inputmode="tel" placeholder="+2781…" required />
+        </label>
+
+        <label class="field">
+          <span>Role</span>
+          <select id="role" required>
+            <option value="client">Client</option>
+            <option value="instructor">Instructor</option>
+            <option value="team_leader">Team Leader</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
+            <option value="supervisor">Supervisor</option>
+          </select>
+        </label>
+
+        <!-- Supervisor key -->
+        <label id="supKeyWrap" class="field hidden">
+          <span>Supervisor key</span>
+          <div class="password-box">
+            <input id="supKey" type="password" autocomplete="off" />
+            <button type="button" id="toggleSupKey" class="eye-btn">👁</button>
+          </div>
+          <small>Required only for Supervisor signups.</small>
+        </label>
+
+        <button id="startSmsBtn" type="submit" class="btn-primary">
+          Send verification link
+        </button>
+
+        <div id="result" class="hidden" aria-live="polite"></div>
+      </form>
+    </section>
+  </main>
+
+  <footer>Software by Bulembu Digital</footer>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+  <script type="module" src="../js/theme.js"></script>
+  <script type="module" src="../js/splash.js"></script>
+  <script type="module" src="../js/signup.js"></script>
+
+  <script>
+    // Supervisor key visibility
+    const roleEl = document.getElementById("role");
+    const supKeyWrap = document.getElementById("supKeyWrap");
+
+    function toggleSupKeyVisibility() {
+      supKeyWrap.classList.toggle("hidden", roleEl.value !== "supervisor");
+    }
+
+    roleEl.addEventListener("change", toggleSupKeyVisibility);
+    toggleSupKeyVisibility();
+
+    // Eye toggle
+    const supKeyInput = document.getElementById("supKey");
+    const toggleBtn = document.getElementById("toggleSupKey");
+
+    toggleBtn.addEventListener("click", () => {
+      const show = supKeyInput.type === "password";
+      supKeyInput.type = show ? "text" : "password";
+      toggleBtn.textContent = show ? "🙈" : "👁";
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Verify — At Home Driving School</title>
+
+  <!-- reuse your global CSS files -->
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/auth.css" />
+
+  <!-- Supabase CDN (must load before modules that import sb) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+
+  <!-- small inline styling for the page container only (optional) -->
+  <style>
+    body { background:#0f1a20; color:#e6eef6; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; }
+    .wrap { max-width:860px; margin:64px auto; padding:36px; background:rgba(0,0,0,0.16); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.6); }
+    h1 { margin:0 0 10px; font-size:40px; color:#fff; }
+    .lead { color:#cfe1ea; margin-bottom:22px; }
+    .status { height:22px; margin:20px 0; background:#0a1114; border-radius:6px; }
+    pre.debug { margin-top:20px; padding:12px; background:#071015; border-radius:8px; color:#9fb7c6; max-height:260px; overflow:auto; font-size:13px; }
+    .btn { display:inline-block; padding:8px 12px; border-radius:6px; background:#fff; color:#111; text-decoration:none; }
+    .notice-err { background:#4d1a1a; color:#ffd6d6; padding:12px; border-radius:8px; margin:10px 0; }
+    .notice-ok { background:#173b23; color:#c9f7d1; padding:12px; border-radius:8px; margin:10px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="page">
+    <h1>Verifying…</h1>
+    <p class="lead">Waiting for session, saving your profile, then routing…</p>
+
+    <div id="statusBar" class="status" aria-hidden="true"></div>
+    <div id="result" class="hidden" role="status" aria-live="polite"></div>
+
+    <p><a id="backBtn" class="btn" href="/html/login.html">Back to login</a></p>
+
+    <pre id="debug" class="debug" aria-hidden="true">{}</pre>
+  </div>
+
+  <!-- your helper modules -->
+  <script type="module" src="/js/theme.js"></script>
+  <script type="module" src="/js/splash.js"></script>
+
+  <!-- local supabase client wrapper (exports `sb`) -->
+  <script type="module" src="/js/supabaseClient.js"></script>
+
+  <!-- the verify logic -->
+  <script type="module" src="/js/verify-otp.js"></script>
+</body>
+</html>

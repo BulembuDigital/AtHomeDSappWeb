@@ -1,0 +1,285 @@
+/* ==========================================================
+   DESIGN TOKENS — LIGHT THEME (DEFAULT)
+   Cleaned, simplified, modernized
+   ========================================================== */
+:root {
+  /* Surfaces */
+  --bg: #f7f8fb;
+  --bg-elev: #ffffff;
+  --bg-card: #ffffff;
+
+  /* Text */
+  --text: #0e101a;
+  --text-dim: #68738b;
+
+  /* Borders */
+  --border: #e5e8ef;
+
+  /* Brand accents */
+  --accent: #1e66ff;
+  --accent-2: #e34848;
+  --accent-ink: #0a2b82;
+
+  /* Visual effects */
+  --ring: rgba(30,102,255,0.35);
+  --shadow-1: 0 2px 14px rgba(0,0,0,0.06);
+  --shadow-2: 0 18px 36px rgba(0,0,0,0.12);
+
+  /* Shapes */
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 26px;
+
+  --space: clamp(14px, 2.4vw, 20px);
+
+  /* Typography */
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+
+  color-scheme: light;
+}
+
+/* ==========================================================
+   DARK THEME OVERRIDES
+   ========================================================== */
+html[data-theme="dark"] {
+  --bg: #0b0d14;
+  --bg-elev: #121622;
+  --bg-card: #171b2c;
+
+  --text: #e6ebff;
+  --text-dim: #8f9bbd;
+
+  --border: #242b3c;
+
+  --accent: #4d8bff;
+  --accent-2: #ff6363;
+  --accent-ink: #cfe0ff;
+
+  --shadow-1: 0 2px 18px rgba(0,0,0,0.40);
+  --shadow-2: 0 28px 48px rgba(0,0,0,0.55);
+
+  color-scheme: dark;
+}
+
+/* ==========================================================
+   GLOBAL LAYOUT + RESET
+   ========================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+/* ==========================================================
+   CONTAINER / WRAPPERS
+   ========================================================== */
+.container {
+  max-width: 1100px;
+  margin-inline: auto;
+  padding: var(--space);
+}
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px var(--space);
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+}
+
+.brand {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.brand .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 14px 4px rgba(30,102,255,0.45);
+}
+
+/* ==========================================================
+   FOOTER
+   ========================================================== */
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+/* ==========================================================
+   CARDS
+   ========================================================== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+}
+
+.card-gradient {
+  background: radial-gradient(800px 500px at 10% -10%, rgba(30,102,255,0.12), transparent 60%), var(--bg-card);
+}
+
+.pad {
+  padding: var(--space);
+}
+
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.25s, box-shadow 0.25s, transform 0.12s;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--bg-card) 85%, var(--accent) 15%);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn.primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.btn.danger {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: var(--border);
+}
+
+/* ==========================================================
+   INPUTS
+   ========================================================== */
+input, textarea, select {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+  outline: none;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ==========================================================
+   TABLES
+   ========================================================== */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.table th, .table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  background: rgba(30,102,255,0.06);
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ==========================================================
+   MISC UTILITIES
+   ========================================================== */
+.muted { color: var(--text-dim); }
+.center { text-align: center; }
+.hidden { display: none !important; }
+
+.round { border-radius: var(--radius); }
+.shadow { box-shadow: var(--shadow-1); }
+.w-100 { width: 100%; }
+
+.spaced { margin-top: var(--space); }
+
+/* ==========================================================
+   SCROLLBAR
+   ========================================================== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(30,102,255,0.4) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(30,102,255,0.4);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}

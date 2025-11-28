@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Pending Approval · At Home Driving School</title>
+
+  <link rel="stylesheet" href="/css/base.css"/>
+  <link rel="stylesheet" href="/css/auth.css"/>
+
+  <!-- Supabase (needed for session check) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+
+  <!-- shared -->
+  <script type="module" src="/js/theme.js"></script>
+  <script type="module" src="/js/splash.js"></script>
+
+  <!-- page -->
+  <script type="module" src="/js/pending.js"></script>
+</head>
+<body>
+<header class="header card-gradient">
+  <div class="brand"><span class="dot"></span> At Home Driving School</div>
+  <div class="row">
+    <button class="btn" onclick="location.href='/html/login.html'">Log in</button>
+    <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+  </div>
+</header>
+
+<main class="container" style="max-width: 560px;">
+  <section class="card pad card-gradient" style="text-align:center;">
+    <h1 style="margin:0 0 8px;">Your account is pending approval</h1>
+    <p class="muted">An administrator must approve your signup before you can access the system.  
+       You’ll get an email when your account is ready.</p>
+
+    <div id="statusBox" class="spaced muted">
+      Checking your approval status…
+    </div>
+
+    <div style="margin-top:20px;">
+      <button class="btn" onclick="location.href='/html/login.html'">Back to Login</button>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  Software by <span class="glow">Bulembu Digital</span>
+</footer>
+</body>
+</html>
