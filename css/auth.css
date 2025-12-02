@@ -1,29 +1,34 @@
-/* ========== auth.css (Polished, minimal + futuristic) ========== */
+/* ========== auth.css (Polished, theme-aware, matches base.css) ========== */
 
 /* ----------------------------------------------
    GLOBAL AUTH PAGE STRUCTURE
 ------------------------------------------------ */
 
 .auth-container {
+  min-height: calc(100vh - 80px); /* leave room for header if present */
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 40px 20px;
+  background:
+    radial-gradient(900px 600px at 10% -10%, rgba(31,78,255,0.14), transparent 55%),
+    radial-gradient(900px 600px at 90% -10%, rgba(224,51,51,0.14), transparent 55%),
+    var(--bg);
 }
 
 .auth-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: color-mix(in srgb, var(--bg-elev) 88%, rgba(255,255,255,0.06) 12%);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, rgba(255,255,255,0.3) 30%);
   backdrop-filter: blur(14px);
   border-radius: 18px;
   padding: 2.5rem;
   max-width: 420px;
   width: 100%;
-  box-shadow: 0 0 40px rgba(0,0,0,0.35);
-  animation: fadeIn 0.35s ease;
+  box-shadow: var(--shadow-2);
+  animation: authFadeIn 0.35s ease;
 }
 
-@keyframes fadeIn {
+@keyframes authFadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
@@ -36,11 +41,12 @@
   margin: 0 0 0.4rem;
   font-size: 1.7rem;
   letter-spacing: -0.3px;
+  color: var(--text);
 }
 
 .auth-card p {
   margin: 0 0 1.6rem;
-  opacity: 0.75;
+  color: var(--text-dim);
 }
 
 /* ----------------------------------------------
@@ -61,29 +67,35 @@
 
 .field span {
   font-size: 0.9rem;
-  opacity: 0.85;
+  color: var(--text-dim);
   margin-left: 2px;
 }
 
-/* Inputs & selects share a unified futuristic look */
+/* Inputs & selects share a unified look tied to base.css */
 
 .auth-form input,
 .auth-form select {
   width: 100%;
   padding: 0.9rem 1rem;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: color-mix(in srgb, var(--bg-elev) 85%, rgba(0,0,0,0.03) 15%);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  color: #fff;
+  color: var(--text);
   font-size: 1rem;
-  transition: border 0.2s ease, background 0.2s ease;
+  transition: border 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-form input::placeholder,
+.auth-form select::placeholder {
+  color: var(--text-dim);
 }
 
 .auth-form input:focus,
 .auth-form select:focus {
   outline: none;
-  background: rgba(255,255,255,0.12);
-  border-color: #4d8bff;
+  background: var(--bg-elev);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 /* ----------------------------------------------
@@ -93,9 +105,9 @@
 .password-box {
   display: flex;
   align-items: center;
-  background: rgba(255,255,255,0.06);
+  background: color-mix(in srgb, var(--bg-elev) 80%, rgba(0,0,0,0.05) 20%);
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--border);
 }
 
 .password-box input {
@@ -103,6 +115,11 @@
   border: none;
   background: transparent;
   padding: 0.9rem 1rem;
+  color: var(--text);
+}
+
+.password-box input::placeholder {
+  color: var(--text-dim);
 }
 
 .password-box input:focus {
@@ -115,40 +132,52 @@
   cursor: pointer;
   background: none;
   border: none;
-  color: #fff;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  color: var(--text-dim);
+  opacity: 0.7;
+  transition: opacity 0.2s, color 0.2s;
 }
 
 .eye-btn:hover {
   opacity: 1;
+  color: var(--accent);
 }
 
 /* ----------------------------------------------
-   BUTTONS
+   BUTTONS (auth-specific, but aligned with base)
 ------------------------------------------------ */
 
 .btn-primary {
   width: 100%;
   padding: 0.9rem;
   border-radius: 10px;
-  background: #4d8bff;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
   border: none;
   cursor: pointer;
-  color: white;
+  color: #fff;
   font-size: 1rem;
   font-weight: 600;
-  transition: background 0.2s ease;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.28);
+  transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: #3a73da;
+  transform: translateY(-1px);
+  box-shadow: 0 15px 32px rgba(0,0,0,0.32);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+  box-shadow: var(--shadow-1);
 }
 
 .btn-link {
-  color: #4d8bff;
+  color: var(--accent);
   text-decoration: none;
   font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .btn-link:hover {
@@ -164,22 +193,23 @@
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.05);
+  background: color-mix(in srgb, var(--bg-elev) 86%, rgba(0,0,0,0.05) 14%);
   text-align: center;
+  font-size: 0.9rem;
 }
 
 .notice-ok {
-  color: #19da7a;
+  color: #18b86b;
   font-weight: 700;
 }
 
 .notice-err {
-  color: #ff7181;
+  color: #ff5c6f;
   font-weight: 700;
 }
 
 /* ----------------------------------------------
-   OTP GRID (verify-otp)
+   OTP GRID (verify-otp / verify-magic-link)
 ------------------------------------------------ */
 
 .otp-grid {
@@ -196,15 +226,15 @@
   padding: 0.65rem 0.5rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.06);
+  background: color-mix(in srgb, var(--bg-elev) 80%, rgba(0,0,0,0.06) 20%);
   color: var(--text);
   transition: all 0.2s ease;
 }
 
 .otp-cell:focus {
   outline: none;
-  border-color: #4d8bff;
-  box-shadow: 0 0 0 3px rgba(77, 139, 255, 0.3);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 /* ----------------------------------------------
@@ -214,7 +244,7 @@
 .auth-footer {
   text-align: center;
   margin-top: 30px;
-  opacity: 0.5;
+  color: var(--text-dim);
   font-size: 0.85rem;
 }
 
@@ -223,8 +253,11 @@
 ------------------------------------------------ */
 
 @media (max-width: 520px) {
+  .auth-container {
+    padding: 28px 14px;
+  }
   .auth-card {
-    padding: 2rem;
+    padding: 2rem 1.6rem;
   }
   .btn-primary {
     width: 100%;

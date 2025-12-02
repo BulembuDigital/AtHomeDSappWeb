@@ -5,38 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Team Leader · At Home Driving School</title>
 
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180.png">
+
   <!-- Base Styles -->
   <link rel="stylesheet" href="/css/base.css" />
-  <link rel="stylesheet" href="/css/auth.css" />
   <link rel="stylesheet" href="/css/ui-sparkle.css" />
+  <link rel="stylesheet" href="/css/splash.css" />
 
   <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    defer
-  ></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
   <!-- Leaflet Draw -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
-  />
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"
-    defer
-  ></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js" defer></script>
 
   <!-- Supabase -->
   <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
 
-  <!-- App -->
-  <script src="/js/supabaseClient.js" defer></script>
-  <script src="/js/theme.js" defer></script>
-  <script src="/js/splash.js" defer></script>
+  <!-- SDK -->
+  <script defer src="/js/supabaseClient.js"></script>
+  <script type="module" src="/js/sdk/auth.js"></script>
+  <script type="module" src="/js/sdk/profiles.js"></script>
+  <script type="module" src="/js/sdk/materials.js"></script>
+  <script type="module" src="/js/sdk/routes.js"></script>
+  <script type="module" src="/js/sdk/schedules.js"></script>
+  <script type="module" src="/js/sdk/messages.js"></script>
+  <script type="module" src="/js/sdk/liveLocations.js"></script>
+
+  <!-- Theme + Splash -->
+  <script defer src="/js/theme.js"></script>
+  <script defer src="/js/ui-sparkle.js"></script>
+  <script defer src="/js/splash.js"></script>
 
   <!-- Page Logic -->
   <script type="module" src="/js/team-leader.js"></script>
@@ -44,14 +46,14 @@
   <style>
     .tabs {
       display: flex;
-      gap: 8px;
+      gap: 6px;
+      flex-wrap: wrap;
       border-bottom: 1px solid var(--border);
-      margin-bottom: 16px;
     }
     .tab {
       padding: 10px 16px;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-dim);
       border-radius: 12px 12px 0 0;
       border: 1px solid transparent;
@@ -59,20 +61,22 @@
     .tab.active {
       background: var(--bg-elev);
       color: var(--text);
-      border: 1px solid var(--border);
-      border-bottom-color: transparent;
+      border-color: var(--border) var(--border) transparent var(--border);
+      position: relative;
     }
-    .panel {
-      display: none;
-      animation: fade 0.25s ease;
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: -1px;
+      height: 2px;
+      background: var(--accent);
     }
-    .panel.active {
-      display: block;
-    }
-    @keyframes fade {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+
+    .panel { display: none; padding-top: 20px; }
+    .panel.active { display: block; animation: fade .25s ease; }
+    @keyframes fade { from {opacity:0;} to {opacity:1;} }
 
     #planner-map {
       width: 100%;
@@ -98,20 +102,34 @@
   </style>
 </head>
 
-<body>
+<body class="soft-page">
+
+<!-- Splash -->
+<div class="splash-overlay show">
+  <div class="splash">
+    <div class="logo-wrap">
+      <img src="/icons/logo-512.png" class="logo" alt="Logo" />
+      <div class="glow"></div>
+      <div class="bloom"></div>
+    </div>
+    <div class="loader">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+  </div>
+</div>
 
 <header class="header card-gradient">
-  <div class="brand">
-    <span class="dot"></span> Team Leader Dashboard
-  </div>
+  <div class="brand"><span class="dot"></span> Team Leader Dashboard</div>
+
   <div class="row" style="gap:12px;">
     <span id="tlName" class="muted"></span>
-    <button class="btn" id="logoutBtn">Logout</button>
+
+    <button class="btn danger" id="logoutBtn">Logout</button>
     <button data-theme-toggle class="theme-toggle"></button>
   </div>
 </header>
 
-<main class="container soft-page">
+<main class="container">
 
   <!-- TABS -->
   <nav id="tabs" class="tabs">
@@ -123,7 +141,7 @@
     <button class="tab" data-tab="messages">Messages</button>
   </nav>
 
-  <!-- PANEL: HOME -->
+  <!-- HOME -->
   <section data-panel="home" class="panel active">
     <div class="card card-gradient pad">
       <h2>Roster</h2>
@@ -132,18 +150,13 @@
     </div>
   </section>
 
-  <!-- PANEL: PLANNER -->
+  <!-- PLANNER -->
   <section data-panel="planner" class="panel">
     <div class="card card-gradient pad">
       <h2>Route Planner</h2>
 
       <div class="row" style="gap:12px; margin-bottom: 12px;">
-        <input
-          id="route_title"
-          class="btn"
-          placeholder="Route title"
-          style="flex:1;"
-        />
+        <input id="route_title" class="btn" placeholder="Route title" style="flex:1;" />
         <button class="btn primary" id="saveRoute">Save Route</button>
       </div>
 
@@ -154,7 +167,7 @@
     </div>
   </section>
 
-  <!-- PANEL: CALENDAR -->
+  <!-- CALENDAR -->
   <section data-panel="calendar" class="panel">
     <div class="card card-gradient pad">
       <h2>Instructor Calendar</h2>
@@ -172,7 +185,7 @@
     </div>
   </section>
 
-  <!-- PANEL: LIVE MAP -->
+  <!-- LIVE MAP -->
   <section data-panel="live" class="panel">
     <div class="card card-gradient pad">
       <h2>Live Instructor Locations</h2>
@@ -180,7 +193,7 @@
     </div>
   </section>
 
-  <!-- PANEL: MATERIALS -->
+  <!-- MATERIALS -->
   <section data-panel="materials" class="panel">
     <div class="card card-gradient pad">
       <h2>Zone Materials</h2>
@@ -188,7 +201,7 @@
     </div>
   </section>
 
-  <!-- PANEL: MESSAGES -->
+  <!-- MESSAGES -->
   <section data-panel="messages" class="panel">
     <div class="card card-gradient pad">
 
@@ -208,9 +221,13 @@
 
 </main>
 
-<footer class="footer">
-  © SAHA
-</footer>
+<footer class="footer">A property of <span class="glow">SAHA</span></footer>
+
+<!-- LOGOUT HANDLER -->
+<script type="module">
+  import { logout } from "/js/sdk/auth.js";
+  document.getElementById("logoutBtn").onclick = logout;
+</script>
 
 </body>
 </html>

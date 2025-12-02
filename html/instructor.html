@@ -1,21 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Instructor · At Home Driving School</title>
 
-  <link rel="stylesheet" href="/css/base.css">
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180.png">
 
-  <!-- Theme + splash -->
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/ui-sparkle.css">
+  <link rel="stylesheet" href="/css/splash.css">
+
+  <!-- Theme + UI -->
   <script defer src="/js/theme.js"></script>
+  <script defer src="/js/ui-sparkle.js"></script>
   <script defer src="/js/splash.js"></script>
 
   <!-- Supabase -->
   <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <!-- SDK Core -->
-  <script defer src="/js/sdk/supabaseClient.js"></script>
+  <script type="module" src="/js/supabaseClient.js"></script>
   <script type="module" src="/js/sdk/auth.js"></script>
   <script type="module" src="/js/sdk/profiles.js"></script>
   <script type="module" src="/js/sdk/schedules.js"></script>
@@ -30,31 +38,62 @@
   <style>
     /* Tabs */
     .tabs {
-      display:flex; gap:6px; flex-wrap:wrap;
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
       border-bottom:1px solid var(--border);
     }
     .tab {
-      padding:10px 16px; border-radius:12px 12px 0 0;
-      font-weight:700; cursor:pointer;
+      padding:10px 16px;
+      border-radius:12px 12px 0 0;
+      font-weight:700;
+      cursor:pointer;
       color:var(--text-dim);
       border:1px solid transparent;
+      transition:.25s;
     }
     .tab.active {
-      background:var(--bg-elev); color:var(--text);
+      background:var(--bg-elev);
+      color:var(--text);
       border-color:var(--border) var(--border) transparent var(--border);
       position:relative;
     }
     .tab.active::after {
-      content:""; position:absolute; left:12px; right:12px;
-      bottom:-1px; height:2px; background:var(--accent); border-radius:2px;
+      content:"";
+      position:absolute;
+      left:12px;
+      right:12px;
+      bottom:-1px;
+      height:2px;
+      background:var(--accent);
+      border-radius:2px;
     }
-    .panel { display:none; padding-top:20px; }
-    .panel.active { display:block; animation:fade .25s; }
+
+    /* Panels */
+    .panel {
+      display:none;
+      padding-top:20px;
+      animation:fade .25s ease;
+    }
+    .panel.active { display:block; }
     @keyframes fade { from {opacity:0;} to {opacity:1;} }
 
+    /* Avatar */
     .avatar {
-      width:92px; height:92px; border-radius:50%;
-      object-fit:cover; border:2px solid var(--border);
+      width:92px;
+      height:92px;
+      border-radius:50%;
+      object-fit:cover;
+      border:2px solid var(--border);
+    }
+
+    /* Lesson/slot cards */
+    .slot {
+      padding:12px;
+      border-radius:14px;
+      background:var(--bg-elev);
+      border:1px solid var(--border);
+      margin-bottom:10px;
     }
 
     .list-row {
@@ -65,45 +104,73 @@
       border-bottom:1px solid var(--border);
     }
 
-    .slot {
-      padding:10px; border-radius:12px; background:var(--bg-elev);
-      border:1px solid var(--border); margin-bottom:8px;
-    }
-
+    /* Messages */
     .msg-wrap {
-      display:grid; grid-template-columns:300px 1fr; gap:12px;
+      display:grid;
+      grid-template-columns:300px 1fr;
+      gap:12px;
     }
-    @media (max-width:900px) { .msg-wrap { grid-template-columns:1fr; } }
+    @media (max-width:900px) {
+      .msg-wrap { grid-template-columns:1fr; }
+    }
 
     .thread-item {
-      padding:10px; border-radius:12px; background:var(--bg-elev);
-      border:1px solid var(--border); cursor:pointer;
+      padding:10px;
+      border-radius:12px;
+      background:var(--bg-elev);
+      border:1px solid var(--border);
+      cursor:pointer;
     }
-    .thread-item.active { outline:2px solid var(--accent); }
+    .thread-item.active {
+      outline:2px solid var(--accent);
+    }
 
     .msg {
-      max-width:80%; padding:10px 14px; margin-bottom:10px; border-radius:12px;
+      max-width:80%;
+      padding:10px 14px;
+      margin-bottom:10px;
+      border-radius:12px;
     }
-    .msg.me { margin-left:auto; background:color-mix(in oklab, var(--accent) 20%, var(--bg-elev)); }
-    .msg.other { background:var(--bg-elev); border:1px solid var(--border); }
-
+    .msg.me {
+      margin-left:auto;
+      background:color-mix(in srgb, var(--accent) 22%, var(--bg-elev) 78%);
+    }
+    .msg.other {
+      background:var(--bg-elev);
+      border:1px solid var(--border);
+    }
   </style>
 </head>
 
-<body>
+<body class="soft-page">
+
+<!-- Splash -->
+<div class="splash-overlay show">
+  <div class="splash">
+    <div class="logo-wrap">
+      <img class="logo" src="/icons/logo-512.png" alt="Logo">
+      <div class="glow"></div>
+      <div class="bloom"></div>
+    </div>
+    <div class="loader">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+  </div>
+</div>
 
 <header class="header card-gradient">
-  <div class="brand"><span class="dot"></span> At Home Driving School</div>
-  <div class="row">
+  <div class="brand"><span class="dot"></span> Instructor Dashboard</div>
+
+  <div class="row" style="gap:12px;">
     <button class="btn" onclick="location.href='/html/home.html'">Home</button>
-    <button class="btn" onclick="location.href='/html/login.html'">Switch</button>
+    <button class="btn danger" id="logoutBtn">Logout</button>
     <button class="theme-toggle" data-theme-toggle></button>
   </div>
 </header>
 
 <main class="container">
 
-  <!-- TABS -->
+  <!-- Tabs -->
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="today">Today's Lessons</button>
     <button class="tab" data-tab="upcoming">Upcoming</button>
@@ -113,7 +180,7 @@
     <button class="tab" data-tab="profile">Profile</button>
   </nav>
 
-  <!-- TODAY'S LESSONS -->
+  <!-- TODAY -->
   <section class="panel active" data-panel="today">
     <div class="card card-gradient pad">
       <h2>Today's Lessons</h2>
@@ -151,14 +218,15 @@
 
         <section>
           <div id="threadBox"
-               style="height:48vh;overflow:auto;border:1px solid var(--border);
-               border-radius:12px;padding:12px;background:var(--bg-elev);"></div>
+               style="height:48vh; overflow:auto; border:1px solid var(--border);
+               border-radius:12px; padding:12px; background:var(--bg-elev);"></div>
 
-          <div class="row" style="gap:10px;margin-top:12px;">
+          <div class="row" style="gap:10px; margin-top:12px;">
             <textarea id="msgBody" rows="2" class="btn" style="flex:1;" placeholder="Message…"></textarea>
             <button id="sendMsg" class="btn primary">Send</button>
           </div>
         </section>
+
       </div>
 
     </div>
@@ -187,7 +255,7 @@
         </div>
       </div>
 
-      <div class="row wrap" style="gap:12px;margin-top:16px;">
+      <div class="row wrap" style="gap:12px; margin-top:16px;">
         <input id="name" class="btn" placeholder="Full name" style="min-width:220px;"/>
         <input id="phone" class="btn" placeholder="Phone (+27…)" style="min-width:200px;"/>
         <button id="saveProfile" class="btn primary">Save Profile</button>
@@ -199,6 +267,12 @@
 </main>
 
 <footer class="footer">A property of <span class="glow">SAHA</span></footer>
+
+<!-- Logout -->
+<script type="module">
+  import { logout } from "/js/sdk/auth.js";
+  document.getElementById("logoutBtn").onclick = logout;
+</script>
 
 </body>
 </html>

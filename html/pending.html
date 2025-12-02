@@ -1,50 +1,142 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Pending Approval · At Home Driving School</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Awaiting Approval</title>
 
-  <link rel="stylesheet" href="/css/base.css"/>
-  <link rel="stylesheet" href="/css/auth.css"/>
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180.png">
 
-  <!-- Supabase (needed for session check) -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/ui-sparkle.css">
+  <link rel="stylesheet" href="/css/splash.css">
 
-  <!-- shared -->
-  <script type="module" src="/js/theme.js"></script>
-  <script type="module" src="/js/splash.js"></script>
+  <!-- Theme + UI -->
+  <script defer src="/js/theme.js"></script>
+  <script defer src="/js/ui-sparkle.js"></script>
+  <script defer src="/js/splash.js"></script>
 
-  <!-- page -->
-  <script type="module" src="/js/pending.js"></script>
+  <style>
+    body {
+      height: 100vh;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    p {
+      max-width: 420px;
+      opacity: 0.85;
+      margin-bottom: 18px;
+      line-height: 1.45;
+    }
+
+    .loader {
+      display: inline-flex;
+      gap: 8px;
+      margin: 16px 0 28px;
+    }
+    .loader .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: .75;
+      animation: bounce 1.25s infinite ease-in-out;
+    }
+    .loader .dot:nth-child(2) { animation-delay: .15s; }
+    .loader .dot:nth-child(3) { animation-delay: .30s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity:.65; }
+      40% { transform: translateY(-6px); opacity:1; }
+    }
+  </style>
 </head>
-<body>
-<header class="header card-gradient">
-  <div class="brand"><span class="dot"></span> At Home Driving School</div>
-  <div class="row">
-    <button class="btn" onclick="location.href='/html/login.html'">Log in</button>
-    <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+
+<body class="soft-page">
+
+<!-- Splash -->
+<div class="splash-overlay show">
+  <div class="splash">
+    <div class="logo-wrap">
+      <img class="logo" src="/icons/logo-512.png" alt="Logo">
+      <div class="glow"></div>
+      <div class="bloom"></div>
+    </div>
+
+    <div class="loader">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
   </div>
-</header>
+</div>
 
-<main class="container" style="max-width: 560px;">
-  <section class="card pad card-gradient" style="text-align:center;">
-    <h1 style="margin:0 0 8px;">Your account is pending approval</h1>
-    <p class="muted">An administrator must approve your signup before you can access the system.  
-       You’ll get an email when your account is ready.</p>
+<h1>Your Account Is Awaiting Approval</h1>
 
-    <div id="statusBox" class="spaced muted">
-      Checking your approval status…
-    </div>
+<div class="loader">
+  <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+</div>
 
-    <div style="margin-top:20px;">
-      <button class="btn" onclick="location.href='/html/login.html'">Back to Login</button>
-    </div>
-  </section>
-</main>
+<p>
+  Your profile has been submitted successfully.  
+  A supervisor or admin will review your account shortly.  
+  This page will refresh automatically once you are approved.
+</p>
 
-<footer class="footer">
-  Software by <span class="glow">Bulembu Digital</span>
-</footer>
+<p style="opacity:0.6;font-size:0.85rem;">
+  If approval takes unusually long, please contact your supervisor.
+</p>
+
+<script type="module">
+  import { getSession } from "/js/sdk/auth.js";
+  import { getProfileById } from "/js/sdk/profiles.js";
+
+  async function checkStatus() {
+    const { userId } = await getSession();
+    if (!userId) return location.href = "/html/login.html";
+
+    const profile = await getProfileById(userId);
+    if (!profile) return;
+
+    if (profile.status === "approved") {
+      location.href = dashboardPath(profile.role);
+    }
+  }
+
+  // Check immediately
+  checkStatus();
+
+  // Auto-check every 10 seconds
+  setInterval(checkStatus, 10000);
+
+  function dashboardPath(role) {
+    switch (role) {
+      case "Supervisor": return "/html/supervisor.html";
+      case "Admin": return "/html/admin.html";
+      case "Manager": return "/html/manager.html";
+      case "Team Leader": return "/html/team-leader.html";
+      case "Instructor": return "/html/instructor.html";
+      case "Client": return "/html/client.html";
+      default: return "/html/login.html";
+    }
+  }
+</script>
+
 </body>
 </html>

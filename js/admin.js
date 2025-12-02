@@ -1,78 +1,81 @@
 // =====================================================================
-// ADMIN DASHBOARD (SDK POWERED, CLEAN VERSION)
+// ADMIN DASHBOARD (FINAL, CLEAN, MATCHES UPDATED SDK + HTML)
 // =====================================================================
 
-// --- AUTH & PROFILES --------------------------------------------------
-import { getSession, signOut } from "./sdk/auth.js";
+// --- AUTH -------------------------------------------------------------
+import { getSession, logout } from "/js/sdk/auth.js";
+
+// --- PROFILES ---------------------------------------------------------
 import {
-  getMyProfile,
+  getProfileById,
   getPendingUsers,
   approveUser,
   suspendUser,
-  getUsersByZone,
-} from "./sdk/profiles.js";
+  getUsersByZone
+} from "/js/sdk/profiles.js";
 
 // --- SCHEDULES --------------------------------------------------------
 import {
-  getAllSchedules,
-  getInstructorSlots,
-  getInstructorsInZone,
-} from "./sdk/schedules.js";
+  getAllSchedules
+} from "/js/sdk/schedules.js";
 
-// --- ROUTES / ASSIGNMENTS / MATERIALS --------------------------------
-import { getRoutes, getRouteById } from "./sdk/routes.js";
+// --- ASSIGNMENTS ------------------------------------------------------
 import {
   getAssignmentsForAdmin,
-  assignInstructorToClient,
-  reassignClient,
-} from "./sdk/assignments.js";
-import { getMaterialsForZone } from "./sdk/materials.js";
+  reassignClient
+} from "/js/sdk/assignments.js";
+
+// --- MATERIALS --------------------------------------------------------
+import {
+  getMaterialsForZone
+} from "/js/sdk/materials.js";
 
 // --- MESSAGING --------------------------------------------------------
 import {
   sendMessage,
-  subscribeMessages,
-  getRecipients,
-} from "./sdk/messages.js";
+  subscribeMessages
+} from "/js/sdk/messages.js";
 
-// --- LIVE LOCATIONS + CLOCK EVENTS -----------------------------------
-import { getLiveLocationsStream } from "./sdk/livelocations.js";
-import { clockIn, clockOut } from "./sdk/clockEvents.js";
+// --- LIVE LOCATIONS ---------------------------------------------------
+import { getLiveLocationsStream } from "/js/sdk/liveLocations.js";
 
-// --- UI HELPERS -------------------------------------------------------
+// --- CLOCK EVENTS -----------------------------------------------------
+import { clockIn, clockOut } from "/js/sdk/clockEvents.js";
+
+// --- SHORTCUT ---------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 
 // --- STATE ------------------------------------------------------------
 let me = null;
-let zone = null;
 let myId = null;
+let zone = null;
 
 // =====================================================================
 // BOOT
 // =====================================================================
 async function boot() {
-  // AUTH ---------------------------------------------------------------
+  // Session ------------------------------------------------------------
   const { userId } = await getSession();
   if (!userId) return (location.href = "/html/login.html");
 
-  // PROFILE ------------------------------------------------------------
-  me = await getMyProfile();
+  // Profile ------------------------------------------------------------
+  me = await getProfileById(userId);
   if (!me) return (location.href = "/html/login.html");
 
   if (me.status !== "approved")
     return (location.href = "/html/pending.html");
 
-  if (me.role !== "admin")
+  if (me.role !== "Admin")
     return (location.href = "/html/login.html");
 
-  zone = me.zone;
   myId = me.id;
+  zone = me.zone;
 
-  // UI hydrate
-  $("#adminName").textContent = me.name;
-  $("#adminZone").textContent = zone;
+  // UI hydrate ---------------------------------------------------------
+  if ($("#adminName")) $("#adminName").textContent = me.name;
+  if ($("#adminZone")) $("#adminZone").textContent = zone ?? "—";
 
-  // Load dashboard modules
+  // Modules ------------------------------------------------------------
   loadPendingApprovals();
   loadUsersList();
   loadSchedules();
@@ -95,19 +98,23 @@ async function loadPendingApprovals() {
   const box = $("#pendingBox");
   box.innerHTML = "";
 
-  if (!list.length) {
+  if (!list?.length) {
     box.innerHTML = `<p>No pending approvals.</p>`;
     return;
   }
 
   list.forEach((u) => {
-    const el = document.createElement("div");
-    el.className = "pending-item";
-    el.innerHTML = `
-      <p><b>${u.name}</b> (${u.role})</p>
-      <button data-id="${u.id}" class="approveBtn">Approve</button>
+    const wrap = document.createElement("div");
+    wrap.className = "pending-item";
+    wrap.innerHTML = `
+      <div class="row space-between">
+        <span><b>${u.name}</b> — ${u.role}</span>
+        <button data-id="${u.id}" class="btn small primary approveBtn">
+          Approve
+        </button>
+      </div>
     `;
-    box.appendChild(el);
+    box.appendChild(wrap);
   });
 
   box.querySelectorAll(".approveBtn").forEach((btn) => {
@@ -130,12 +137,10 @@ async function loadUsersList() {
   users.forEach((u) => {
     const row = document.createElement("div");
     row.className = "user-row";
-
     row.innerHTML = `
-      <p>${u.name} — ${u.role}</p>
-      <button data-id="${u.id}" class="suspendBtn">Suspend</button>
+      <span>${u.name} — ${u.role}</span>
+      <button data-id="${u.id}" class="btn danger small suspendBtn">Suspend</button>
     `;
-
     box.appendChild(row);
   });
 
@@ -174,21 +179,28 @@ async function loadAssignments() {
   const box = $("#assignBox");
   box.innerHTML = "";
 
+  if (!assigns.length) {
+    box.innerHTML = `<p>No current assignments.</p>`;
+    return;
+  }
+
   assigns.forEach((a) => {
     const el = document.createElement("div");
     el.className = "assign-item";
     el.innerHTML = `
-      <p>${a.client_name} → ${a.instructor_name}</p>
-      <button data-client="${a.client_id}" class="reassignBtn">Reassign</button>
+      <p><b>${a.client_name}</b> → ${a.instructor_name}</p>
+      <button class="btn small reassignBtn" data-client="${a.client_id}">
+        Reassign
+      </button>
     `;
     box.appendChild(el);
   });
 
   box.querySelectorAll(".reassignBtn").forEach((btn) => {
     btn.onclick = async () => {
-      const newInstructor = prompt("Enter new instructor ID:");
-      if (!newInstructor) return;
-      await reassignClient(btn.dataset.client, newInstructor);
+      const newInst = prompt("Enter new instructor ID:");
+      if (!newInst) return;
+      await reassignClient(btn.dataset.client, newInst);
       loadAssignments();
     };
   });
@@ -203,7 +215,7 @@ async function loadMaterials() {
   box.innerHTML = "";
 
   if (!materials.length) {
-    box.innerHTML = `<p>No materials yet.</p>`;
+    box.innerHTML = `<p>No materials available.</p>`;
     return;
   }
 
@@ -212,7 +224,7 @@ async function loadMaterials() {
     el.className = "material-item";
     el.innerHTML = `
       <p>${m.title}</p>
-      <a href="${m.url}" target="_blank">Open</a>
+      <a href="${m.url}" target="_blank" class="btn small">Open</a>
     `;
     box.appendChild(el);
   });
@@ -222,47 +234,52 @@ async function loadMaterials() {
 // MESSAGING
 // =====================================================================
 function initMessaging() {
-  const msgList = $("#messageList");
+  const list = $("#messageList");
 
-  // Subscriptions
+  // Listener
   subscribeMessages(myId, (msg) => {
     const el = document.createElement("div");
     el.className = "msg-item";
-    el.innerHTML = `<p><b>${msg.sender_name}:</b> ${msg.body}</p>`;
-    msgList.appendChild(el);
+    el.innerHTML = `
+      <p><b>${msg.sender_name}:</b> ${msg.body}</p>
+    `;
+    list.appendChild(el);
   });
 
-  // Send message
-  $("#sendMsgBtn").onclick = async () => {
-    const text = $("#msgInput").value.trim();
+  // Sender
+  const sendBtn = $("#sendMsgBtn");
+  const input = $("#msgInput");
+
+  sendBtn.onclick = async () => {
+    const text = input.value.trim();
     if (!text) return;
 
     await sendMessage({
       sender_id: myId,
-      body: text,
       scope: "zone",
       to_zone: zone,
+      body: text
     });
 
-    $("#msgInput").value = "";
+    input.value = "";
   };
 }
 
 // =====================================================================
-// LIVE LOCATION STREAM
+// LIVE LOCATIONS STREAM
 // =====================================================================
 function initLiveLocations() {
-  const mapArea = $("#liveMap");
+  const map = $("#liveMap");
 
   getLiveLocationsStream(zone, (loc) => {
     const p = document.createElement("p");
-    p.textContent = `${loc.user_name}: ${loc.lat}, ${loc.lng}`;
-    mapArea.appendChild(p);
+    p.textContent = `${loc.user_name} — ${loc.lat}, ${loc.lng}`;
+    map.appendChild(p);
   });
 }
 
 // =====================================================================
-// CLOCK IN / OUT
+// CLOCK CONTROLS
 // =====================================================================
 function initClockControls() {
   $("#clockInBtn").onclick = () => clockIn(myId);
@@ -270,9 +287,6 @@ function initClockControls() {
 }
 
 // =====================================================================
-// SIGN OUT
+// LOGOUT
 // =====================================================================
-$("#logoutBtn").onclick = async () => {
-  await signOut();
-  location.href = "/html/login.html";
-};
+$("#logoutBtn").onclick = logout;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,8 +10,8 @@
   <link rel="stylesheet" href="css/splash.css" />
   <link rel="stylesheet" href="css/auth.css" />
 
+  <!-- Page-specific minimal styles -->
   <style>
-    /* Hero Background */
     body {
       background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
       color: white;
@@ -31,13 +31,14 @@
       font-size: 32px;
       font-weight: 800;
       margin-bottom: 25px;
-      letter-spacing: .5px;
+      letter-spacing: 0.5px;
     }
 
     .tagline {
       font-size: 16px;
       opacity: 0.8;
       margin-bottom: 40px;
+      line-height: 1.45;
     }
 
     .btn-main {
@@ -66,7 +67,7 @@
     footer {
       margin-top: 55px;
       font-size: 14px;
-      opacity: .5;
+      opacity: 0.5;
     }
 
     footer span {
@@ -75,7 +76,13 @@
     }
   </style>
 </head>
-<body>
+
+<body class="soft-page">
+
+  <!-- Splash Screen (auto hides by splash.js) -->
+  <div id="splash">
+    <div class="splash-logo">SAHA</div>
+  </div>
 
   <div class="container">
 
@@ -85,14 +92,19 @@
       Learn to drive safely, confidently, and conveniently — all with your dedicated instructor.
     </div>
 
-    <a href="login.html" class="btn-main">Log In</a>
-    <a href="signup.html" class="btn-outline">Create Account</a>
+    <a data-nav="/html/login.html" class="btn-main">Log In</a>
+    <a data-nav="/html/signup.html" class="btn-outline">Create Account</a>
 
   </div>
 
   <footer>
     A property of <span>SAHA</span>
   </footer>
+
+  <!-- Theme, Sparkle, Splash -->
+  <script type="module" src="js/theme.js"></script>
+  <script type="module" src="js/ui-sparkle.js"></script>
+  <script type="module" src="js/splash.js"></script>
 
 </body>
 </html>

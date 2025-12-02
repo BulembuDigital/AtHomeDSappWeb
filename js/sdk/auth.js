@@ -1,105 +1,110 @@
 import { supabase } from "./supabaseClient.js";
-import { getMyProfile } from "./profiles.js";
+import { getProfileById } from "./profiles.js";
 
-/**
- * Send OTP login or signup magic link
- */
-export async function sendOTP(email) {
+/* ---------------------------------------------------------
+   SEND MAGIC LINK LOGIN
+--------------------------------------------------------- */
+export async function signInWithMagicLink(email) {
+  try {
     const { data, error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-            shouldCreateUser: true,
-            emailRedirectTo: window.location.origin + "/verify-otp.html"
-        }
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: window.location.origin + "/html/verify-otp.html"
+      }
     });
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }
 
-/**
- * Verify OTP using the token sent via URL params
- */
-export async function verifyOTP(type, token) {
-    const { data, error } = await supabase.auth.verifyOtp({
-        type,           // "signup" | "magiclink" | "recovery"
-        token,
-        email: null     // Supabase auto-detects from session
-    });
-
-    if (error) throw error;
-    return data;
+/* ---------------------------------------------------------
+   UNIVERSAL SESSION GETTER
+--------------------------------------------------------- */
+export async function getSession() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return {
+      userId: data?.session?.user?.id || null
+    };
+  } catch (err) {
+    return { userId: null };
+  }
 }
 
-/**
- * Post-OTP login: fetch profile and route user accordingly
- */
+/* ---------------------------------------------------------
+   ROUTE USER BASED ON ROLE
+--------------------------------------------------------- */
+export function dashboardPath(role) {
+  switch (role) {
+    case "Supervisor": return "/html/supervisor.html";
+    case "Admin": return "/html/admin.html";
+    case "Manager": return "/html/manager.html";
+    case "Team Leader": return "/html/team-leader.html";
+    case "Instructor": return "/html/instructor.html";
+    case "Client": return "/html/client.html";
+    default: return "/html/login.html";
+  }
+}
+
+/* ---------------------------------------------------------
+   FETCH PROFILE + AUTO-REDIRECT
+--------------------------------------------------------- */
 export async function handlePostLoginRedirect() {
-    const profile = await getMyProfile();
+  const { userId } = await getSession();
+  if (!userId) {
+    window.location.href = "/html/login.html";
+    return;
+  }
 
-    if (!profile) {
-        console.warn("Profile missing. Redirecting to signup.");
-        window.location.href = "/signup.html";
-        return;
-    }
+  const profile = await getProfileById(userId);
 
-    // Status rules
-    if (profile.status === "pending") {
-        window.location.href = "/pending.html";
-        return;
-    }
+  if (!profile) {
+    window.location.href = "/html/signup.html";
+    return;
+  }
 
-    if (profile.status === "suspended") {
-        alert("Your account has been suspended.");
-        await supabase.auth.signOut();
-        return;
-    }
+  // pending → waiting screen
+  if (profile.status === "pending") {
+    window.location.href = "/html/pending.html";
+    return;
+  }
 
-    // Role routing
-    switch (profile.role) {
-        case "supervisor":
-            window.location.href = "/supervisor.html";
-            break;
-
-        case "admin":
-            window.location.href = "/admin.html";
-            break;
-
-        case "manager":
-            window.location.href = "/manager.html";
-            break;
-
-        case "team_leader":
-            window.location.href = "/team-leader.html";
-            break;
-
-        case "instructor":
-            window.location.href = "/instructor.html";
-            break;
-
-        case "client":
-            window.location.href = "/client.html";
-            break;
-
-        default:
-            console.error("Unknown role:", profile.role);
-            window.location.href = "/signup.html";
-    }
-}
-
-/**
- * Logout
- */
-export async function logout() {
+  // suspended → logout + warning
+  if (profile.status === "suspended") {
+    alert("Your account has been suspended.");
     await supabase.auth.signOut();
-    window.location.href = "/login.html";
+    return;
+  }
+
+  // Approved → dashboard
+  window.location.href = dashboardPath(profile.role);
 }
 
-/**
- * Get current authenticated user (raw)
- */
+/* ---------------------------------------------------------
+   LOGOUT
+--------------------------------------------------------- */
+export async function logout() {
+  try {
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.warn("Logout warning:", err);
+  }
+
+  window.location.href = "/html/login.html";
+}
+
+/* ---------------------------------------------------------
+   DIRECT USER FETCH
+--------------------------------------------------------- */
 export async function getCurrentUser() {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    return data.user;
+  const { data, error } = await supabase.auth.getUser();
+  if (error) return null;
+  return data.user;
 }

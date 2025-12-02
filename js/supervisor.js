@@ -1,5 +1,5 @@
 // =====================================================================
-// SUPERVISOR DASHBOARD (Global Access)
+// SUPERVISOR DASHBOARD (Global Access, Modern SDK Version)
 // =====================================================================
 
 // AUTH
@@ -29,133 +29,165 @@ import {
 import {
   sendMessage,
   subscribeMessages,
-  getRecipients,
 } from "./sdk/messages.js";
 
 // LIVE LOCATIONS
-import { getLiveLocationsStream } from "./sdk/livelocations.js";
+import { getLiveLocationsStream } from "./sdk/liveLocations.js";
 
-// HELPERS
+// UI SYSTEM
+import { showSplash, hideSplash } from "./splash.js";
+import { initTheme } from "./theme.js";
+
+initTheme();
+showSplash("Loading Supervisor Dashboard…");
+
+// Helpers
 const $ = (id) => document.getElementById(id);
 
-// STATE
 let me = null;
 let myId = null;
+
 
 // =====================================================================
 // BOOT
 // =====================================================================
 async function boot() {
-  // Session check
   const { userId } = await getSession();
-  if (!userId) return (location.href = "/html/login.html");
+  if (!userId) return location.href = "/html/login.html";
 
-  // Role + profile check
   me = await getMyProfile();
-  if (!me || me.role !== "supervisor") {
-    return location.replace("/html/login.html");
-  }
+  if (!me) return location.href = "/html/login.html";
+
   if (me.status !== "approved") {
-    return location.replace("/html/pending.html");
+    return location.href = "/html/pending.html";
+  }
+
+  if (me.role !== "Supervisor") {
+    return location.href = "/html/login.html";
   }
 
   myId = me.id;
 
   $("#supName").textContent = me.name || "Supervisor";
 
-  loadAllUsers();
-  loadSchedules();
-  loadClockEvents();
-  loadMaterials();
+  await loadAllUsers();
+  await loadSchedules();
+  await loadClockEvents();
+  await loadMaterials();
   initMessaging();
   initLiveLocations();
   initEmergencyControls();
 
+  hideSplash();
   console.log("SUPERVISOR DASHBOARD READY");
 }
 
 boot();
 
+
 // =====================================================================
-// USER DIRECTORY (Supervisor sees everyone)
+// USER DIRECTORY — Supervisor sees every profile
 // =====================================================================
 async function loadAllUsers() {
-  const list = $("#userList");
-  list.innerHTML = "<p>Loading…</p>";
+  const box = $("#userList");
+  box.innerHTML = "<p>Loading users…</p>";
 
   const users = await getAllProfiles();
+  box.innerHTML = "";
 
-  list.innerHTML = "";
+  if (!users.length) {
+    box.innerHTML = "<p>No users found.</p>";
+    return;
+  }
 
   users.forEach((u) => {
     const row = document.createElement("div");
     row.className = "user-row";
     row.innerHTML = `
-      <b>${u.name || u.email}</b>
-      <span>${u.role}</span>
-      <span>${u.status}</span>
-      <button class="btn" data-suspend="${u.id}" ${
-      u.role === "supervisor" ? "disabled" : ""
-    }>Suspend</button>
+      <div class="col">
+        <b>${u.name || u.email}</b>
+        <small>${u.role} • ${u.status}</small>
+      </div>
+      <button class="btn suspendBtn" data-id="${u.id}"
+        ${u.role === "Supervisor" ? "disabled" : ""}>
+        Suspend
+      </button>
     `;
-    list.appendChild(row);
+    box.appendChild(row);
   });
 
-  list.onclick = async (e) => {
-    if (e.target.dataset.suspend) {
-      const uid = e.target.dataset.suspend;
-
+  box.querySelectorAll(".suspendBtn").forEach((btn) => {
+    btn.onclick = async () => {
+      const uid = btn.dataset.id;
       if (!confirm("Suspend this user?")) return;
-
       await updateStatus(uid, "suspended");
-      await loadAllUsers();
-    }
-  };
+      loadAllUsers();
+    };
+  });
 }
 
+
 // =====================================================================
-// USER SEARCH (global search)
+// PROFILE SEARCH — Global search by name or email
 // =====================================================================
 $("#searchUserBtn").onclick = async () => {
   const q = $("#searchUserInput").value.trim();
-  if (!q) return loadAllUsers();
+  const box = $("#userList");
+
+  if (!q) {
+    loadAllUsers();
+    return;
+  }
 
   const results = await searchProfiles(q);
-  const box = $("#userList");
   box.innerHTML = "";
+
+  if (!results.length) {
+    box.innerHTML = "<p>No results.</p>";
+    return;
+  }
 
   results.forEach((u) => {
     const row = document.createElement("div");
     row.className = "user-row";
     row.innerHTML = `
-      <p><b>${u.name}</b> (${u.role})</p>
+      <b>${u.name}</b>
+      <span>${u.role}</span>
     `;
     box.appendChild(row);
   });
 };
 
+
 // =====================================================================
-// SCHEDULES (global)
+// SCHEDULES — Supervisor sees global schedules
 // =====================================================================
 async function loadSchedules() {
-  const sched = await getAllSchedules(); // no zone filter
+  const sched = await getAllSchedules();
   const box = $("#scheduleBox");
 
   box.innerHTML = "";
 
+  if (!sched.length) {
+    box.innerHTML = "<p>No scheduled lessons found.</p>";
+    return;
+  }
+
   sched.forEach((s) => {
-    const el = document.createElement("div");
-    el.className = "schedule-item";
-    el.innerHTML = `
+    const row = document.createElement("div");
+    row.className = "schedule-item";
+
+    row.innerHTML = `
       <p><b>${s.instructor_name}</b> → ${s.client_name}</p>
       <p>${s.date} ${s.time}</p>
     `;
-    box.appendChild(el);
+    box.appendChild(row);
   });
 }
 
+
 // =====================================================================
-// CLOCK EVENTS (global)
+// CLOCK EVENTS — Global list for all users
 // =====================================================================
 async function loadClockEvents() {
   const events = await getClockEventsForAll();
@@ -163,18 +195,25 @@ async function loadClockEvents() {
 
   box.innerHTML = "";
 
+  if (!events.length) {
+    box.innerHTML = "<p>No clock events yet.</p>";
+    return;
+  }
+
   events.forEach((ev) => {
-    const el = document.createElement("div");
-    el.className = "clock-row";
-    el.innerHTML = `
-      <b>${ev.user_name}</b>: ${ev.type} @ ${new Date(ev.ts).toLocaleString()}
+    const row = document.createElement("div");
+    row.className = "clock-row";
+    row.innerHTML = `
+      <b>${ev.user_name}</b>
+      <span>${ev.type} — ${new Date(ev.ts).toLocaleString()}</span>
     `;
-    box.appendChild(el);
+    box.appendChild(row);
   });
 }
 
+
 // =====================================================================
-// MATERIALS (Supervisor sees all, uploads global)
+// MATERIALS — Supervisor sees all zone + global materials
 // =====================================================================
 async function loadMaterials() {
   const mats = await getMaterialsGlobal();
@@ -182,18 +221,26 @@ async function loadMaterials() {
 
   box.innerHTML = "";
 
+  if (!mats.length) {
+    box.innerHTML = "<p>No materials uploaded.</p>";
+    return;
+  }
+
   mats.forEach((m) => {
-    const el = document.createElement("div");
-    el.className = "material-item";
-    el.innerHTML = `
+    const row = document.createElement("div");
+    row.className = "material-item";
+
+    row.innerHTML = `
       <p>${m.title}</p>
       <small>Zone: ${m.zone_type}</small>
       <a href="${m.url}" target="_blank">Open</a>
     `;
-    box.appendChild(el);
+    box.appendChild(row);
   });
 }
 
+
+// Upload new global material
 $("#uploadMaterialBtn").onclick = async () => {
   const title = $("#newMatTitle").value.trim();
   const file = $("#newMatFile").files?.[0];
@@ -205,7 +252,7 @@ $("#uploadMaterialBtn").onclick = async () => {
     file,
     created_by: myId,
     zone: "ALL",
-    roles: ["manager", "admin", "team_leader", "instructor", "client"],
+    roles: ["Supervisor", "Admin", "Manager", "Team Leader", "Instructor", "Client"],
   });
 
   $("#newMatTitle").value = "";
@@ -214,23 +261,20 @@ $("#uploadMaterialBtn").onclick = async () => {
   loadMaterials();
 };
 
+
 // =====================================================================
-// MESSAGING (Supervisor = can message ANY user, role, zone, or broadcast)
+// MESSAGING — Supervisor can broadcast to entire system
 // =====================================================================
 function initMessaging() {
-  const msgBox = $("#msgBox");
+  const box = $("#msgBox");
 
-  // Live messages
   subscribeMessages(myId, (msg) => {
     const el = document.createElement("div");
     el.className = "msg-item";
-    el.innerHTML = `
-      <p><b>${msg.sender_name}</b>: ${msg.body}</p>
-    `;
-    msgBox.appendChild(el);
+    el.innerHTML = `<b>${msg.sender_name}:</b> ${msg.body}`;
+    box.appendChild(el);
   });
 
-  // Send broadcast
   $("#sendGlobalMsgBtn").onclick = async () => {
     const text = $("#globalMsgInput").value.trim();
     if (!text) return;
@@ -239,17 +283,15 @@ function initMessaging() {
       sender_id: myId,
       scope: "all",
       body: text,
-      to_user_id: null,
-      to_role: null,
-      to_zone: null,
     });
 
     $("#globalMsgInput").value = "";
   };
 }
 
+
 // =====================================================================
-// LIVE LOCATION STREAM (Supervisor = everyone)
+// LIVE LOCATION STREAM — Supervisor monitors all instructors
 // =====================================================================
 function initLiveLocations() {
   const box = $("#liveLocBox");
@@ -261,12 +303,13 @@ function initLiveLocations() {
   });
 }
 
+
 // =====================================================================
-// EMERGENCY CONTROLS (soft shutdown / alerts)
+// EMERGENCY CONTROLS
 // =====================================================================
 function initEmergencyControls() {
   $("#emStopSystemBtn").onclick = () => {
-    alert("System STOP triggered (placeholder — requires backend action).");
+    alert("SYSTEM STOP triggered — backend action required.");
   };
 
   $("#emAlertAllBtn").onclick = async () => {
@@ -277,6 +320,7 @@ function initEmergencyControls() {
     });
   };
 }
+
 
 // =====================================================================
 // LOGOUT

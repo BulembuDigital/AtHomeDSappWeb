@@ -1,123 +1,137 @@
+// /js/sdk/liveLocations.js
+// Unified live-location system with full RLS support
 import { supabase } from "./supabaseClient.js";
 
-/* -------------------------------------------------------
-   REALTIME SUBSCRIPTION
-------------------------------------------------------- */
+/* ============================================================
+   REALTIME STREAMING
+   ============================================================
+   getLiveLocationsStream(scope, callback)
+   scope can be:
+     - "ALL" → Supervisor only
+     - zone string (e.g., "CUT", "UFS") → Admin, Manager, TL
+     - user_id → Instructor / Client
+============================================================ */
 
-/**
- * Subscribe to location updates for your zone.
- * 
- * The server RLS automatically restricts which rows
- * the client will receive.
- */
-export function subscribeLiveLocations(callback) {
-    return supabase
-        .channel("live_locations_changes")
-        .on(
-            "postgres_changes",
-            { event: "UPDATE", schema: "public", table: "live_locations" },
-            payload => callback(payload.new)
-        )
-        .subscribe();
+export function getLiveLocationsStream(scope, callback) {
+  const channel = supabase.channel("live_locations_stream_" + scope);
+
+  channel.on(
+    "postgres_changes",
+    {
+      event: "UPDATE",
+      schema: "public",
+      table: "live_locations"
+    },
+    (payload) => {
+      const loc = payload.new;
+
+      // Supervisor sees ALL
+      if (scope === "ALL") {
+        callback(loc);
+        return;
+      }
+
+      // Zone-based (Admin, Manager, TL)
+      if (typeof scope === "string" && scope !== "ALL") {
+        if (loc.zone === scope) callback(loc);
+        return;
+      }
+
+      // User-based (Instructor, Client)
+      if (loc.user_id === scope) callback(loc);
+    }
+  );
+
+  channel.subscribe();
+  return channel;
 }
 
-/* -------------------------------------------------------
+/* ============================================================
    UPDATE OWN LOCATION
-------------------------------------------------------- */
+   ============================================================
+   Called by any logged-in user.
+   RLS ensures a user can ONLY update their own row.
+============================================================ */
 
-/**
- * Called by any authenticated user (client/instructor/TL/admin/supervisor).
- *
- * RLS ensures:
- *  - Users can update ONLY their own row,
- *  - They cannot overwrite someone else’s location,
- *  - They cannot fake role/zone because those come from INSERT.
- */
 export async function updateMyLocation(myId, coords) {
-    const { lat, lng, accuracy = null, heading = null, speed = null } = coords;
+  const {
+    lat,
+    lng,
+    accuracy = null,
+    heading = null,
+    speed = null
+  } = coords;
 
-    const { error } = await supabase
-        .from("live_locations")
-        .update({
-            lat,
-            lng,
-            accuracy,
-            heading,
-            speed,
-            updated_at: new Date().toISOString()
-        })
-        .eq("user_id", myId);
+  const { error } = await supabase
+    .from("live_locations")
+    .update({
+      lat,
+      lng,
+      accuracy,
+      heading,
+      speed,
+      updated_at: new Date().toISOString()
+    })
+    .eq("user_id", myId);
 
-    if (error) throw error;
+  if (error) throw error;
 }
 
-/* -------------------------------------------------------
-   INITIALIZE LOCATION ROW
-------------------------------------------------------- */
+/* ============================================================
+   ENSURE LOCATION ROW EXISTS
+   ============================================================
+   Called after login.
+   RLS must allow INSERT for the user or you must have a SQL trigger.
+============================================================ */
 
-/**
- * Ensures the user has a location row.  
- * Called after login.
- *
- * You MUST create the row server-side (edge function or SQL trigger)
- * OR explicitly allow INSERT for the user (your RLS does).
- */
 export async function ensureMyLocationRow(myId, role, zone) {
-    const { data } = await supabase
-        .from("live_locations")
-        .select("user_id")
-        .eq("user_id", myId)
-        .maybeSingle();
+  const { data } = await supabase
+    .from("live_locations")
+    .select("user_id")
+    .eq("user_id", myId)
+    .maybeSingle();
 
-    if (data) return; // already exists
+  if (data) return; // already exists
 
-    const { error } = await supabase.from("live_locations").insert({
-        user_id: myId,
-        role,
-        zone,
-        lat: null,
-        lng: null,
-        updated_at: new Date().toISOString()
+  const { error } = await supabase
+    .from("live_locations")
+    .insert({
+      user_id: myId,
+      role,
+      zone,
+      lat: null,
+      lng: null,
+      updated_at: new Date().toISOString()
     });
 
-    if (error) throw error;
+  if (error) throw error;
 }
 
-/* -------------------------------------------------------
-   READ ACCESS (RLS-SAFE)
-------------------------------------------------------- */
+/* ============================================================
+   LIST VISIBLE LOCATIONS (RLS LIMITS VISIBILITY)
+============================================================ */
 
-/**
- * Get all locations the logged-in user is permitted to see.
- *
- * RLS handles all filtering:
- *  - Admins → only their zone
- *  - Supervisor → all zones
- *  - TL → instructors & clients assigned to them
- *  - Instructor → only their clients
- *  - Client → only themself
- */
 export async function getVisibleLocations() {
-    const { data, error } = await supabase
-        .from("live_locations")
-        .select("*");
+  const { data, error } = await supabase
+    .from("live_locations")
+    .select("*");
 
-    if (error) throw error;
+  if (error) throw error;
 
-    return data;
+  return data;
 }
 
-/* -------------------------------------------------------
+/* ============================================================
    SINGLE USER LOOKUP
-------------------------------------------------------- */
+============================================================ */
 
 export async function getUserLocation(userId) {
-    const { data, error } = await supabase
-        .from("live_locations")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
+  const { data, error } = await supabase
+    .from("live_locations")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return data;
 }

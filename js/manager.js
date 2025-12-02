@@ -1,42 +1,33 @@
 // =====================================================================
-// MANAGER DASHBOARD
+// MANAGER DASHBOARD — FINAL, CLEAN, SDK-ALIGNED VERSION
 // =====================================================================
 
-// --- AUTH & PROFILE ---------------------------------------------------
-import { getSession, signOut } from "./sdk/auth.js";
-import { getMyProfile, getUsersByZone } from "./sdk/profiles.js";
+// AUTH + PROFILES ------------------------------------------------------
+import { getSession, logout } from "/js/sdk/auth.js";
+import { getMyProfile, getUsersByZone } from "/js/sdk/profiles.js";
 
-// --- SCHEDULES --------------------------------------------------------
-import { getAllSchedules } from "./sdk/schedules.js";
+// SCHEDULES ------------------------------------------------------------
+import { getAllSchedules } from "/js/sdk/schedules.js";
 
-// --- MATERIALS --------------------------------------------------------
-import {
-  getMaterialsForZone,
-  createMaterial,
-} from "./sdk/materials.js";
+// MATERIALS ------------------------------------------------------------
+import { getMaterialsForZone, createMaterial } from "/js/sdk/materials.js";
 
-// --- ASSIGNMENTS ------------------------------------------------------
-import {
-  getAssignmentsForAdmin as getZoneAssignments,
-} from "./sdk/assignments.js";
+// ASSIGNMENTS ----------------------------------------------------------
+import { getAssignmentsForAdmin as getZoneAssignments } from "/js/sdk/assignments.js";
 
-// --- MESSAGING --------------------------------------------------------
-import {
-  sendMessage,
-  subscribeMessages,
-  getRecipients,
-} from "./sdk/messages.js";
+// MESSAGING ------------------------------------------------------------
+import { sendMessage, subscribeMessages } from "/js/sdk/messages.js";
 
-// --- LIVE LOCATIONS ---------------------------------------------------
-import { getLiveLocationsStream } from "./sdk/livelocations.js";
+// LIVE LOCATIONS -------------------------------------------------------
+import { getLiveLocationsStream } from "/js/sdk/liveLocations.js";
 
-// --- CLOCK EVENTS -----------------------------------------------------
-import { clockIn, clockOut } from "./sdk/clockEvents.js";
+// CLOCK EVENTS ----------------------------------------------------------
+import { clockIn, clockOut } from "/js/sdk/clockEvents.js";
 
-// --- UI HELPERS -------------------------------------------------------
+// UI helper -------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 
-// --- STATE ------------------------------------------------------------
+// STATE ----------------------------------------------------------------
 let me = null;
 let myId = null;
 let zone = null;
@@ -45,23 +36,28 @@ let zone = null;
 // BOOT
 // =====================================================================
 async function boot() {
-  // Auth session
+  // Auth
   const { userId } = await getSession();
   if (!userId) return (location.href = "/html/login.html");
+  myId = userId;
 
-  // Profile check
+  // Profile
   me = await getMyProfile();
-  if (!me) return location.replace("/html/login.html");
-  if (me.status !== "approved") return location.replace("/html/pending.html");
-  if (me.role !== "manager") return location.replace("/html/login.html");
+  if (!me) return (location.href = "/html/login.html");
 
-  myId = me.id;
+  if (me.status !== "approved")
+    return (location.href = "/html/pending.html");
+
+  if (me.role !== "Manager")
+    return (location.href = "/html/login.html");
+
   zone = me.zone;
 
-  $("#mgrName").textContent = me.name || "Manager";
-  $("#mgrZone").textContent = zone;
+  // UI hydrate
+  $("#mgrName").textContent = me.name ?? "Manager";
+  $("#mgrZone").textContent = zone ?? "—";
 
-  // Load dashboard modules
+  // Load dashboard sections
   loadSchedules();
   loadZoneUsers();
   loadZoneAssignments();
@@ -76,7 +72,7 @@ async function boot() {
 boot();
 
 // =====================================================================
-// SCHEDULES (Zone-bound)
+// SCHEDULES — All schedules in manager’s zone
 // =====================================================================
 async function loadSchedules() {
   const schedules = await getAllSchedules(zone);
@@ -84,7 +80,7 @@ async function loadSchedules() {
 
   box.innerHTML = "";
 
-  if (!schedules.length) {
+  if (!schedules?.length) {
     box.innerHTML = "<p>No schedules.</p>";
     return;
   }
@@ -101,17 +97,17 @@ async function loadSchedules() {
 }
 
 // =====================================================================
-// USERS (Instructor + Clients in zone)
+// ZONE USERS — Instructors & Clients
 // =====================================================================
 async function loadZoneUsers() {
   const users = await getUsersByZone(zone);
-  const instructors = users.filter((u) => u.role === "instructor");
-  const clients = users.filter((u) => u.role === "client");
+
+  const instructors = users.filter((u) => u.role === "Instructor");
+  const clients = users.filter((u) => u.role === "Client");
 
   // Instructors
   const iBox = $("#instructorsBox");
   iBox.innerHTML = "";
-
   instructors.forEach((u) => {
     const row = document.createElement("div");
     row.className = "user-row";
@@ -122,7 +118,6 @@ async function loadZoneUsers() {
   // Clients
   const cBox = $("#clientsBox");
   cBox.innerHTML = "";
-
   clients.forEach((u) => {
     const row = document.createElement("div");
     row.className = "user-row";
@@ -132,11 +127,12 @@ async function loadZoneUsers() {
 }
 
 // =====================================================================
-// ASSIGNMENTS — Manager sees all instructor-client pairs in their zone
+// ASSIGNMENTS — Instructor <-> Client pairs
 // =====================================================================
 async function loadZoneAssignments() {
   const assigns = await getZoneAssignments(zone);
   const box = $("#assignBox");
+
   box.innerHTML = "";
 
   if (!assigns.length) {
@@ -147,19 +143,18 @@ async function loadZoneAssignments() {
   assigns.forEach((a) => {
     const row = document.createElement("div");
     row.className = "assign-item";
-    row.innerHTML = `
-      <p>${a.client_name} → ${a.instructor_name}</p>
-    `;
+    row.innerHTML = `<p>${a.client_name} → ${a.instructor_name}</p>`;
     box.appendChild(row);
   });
 }
 
 // =====================================================================
-// MATERIALS
+// MATERIALS — View & Upload
 // =====================================================================
 async function loadMaterials() {
   const materials = await getMaterialsForZone(zone);
   const box = $("#materialsBox");
+
   box.innerHTML = "";
 
   if (!materials.length) {
@@ -178,18 +173,19 @@ async function loadMaterials() {
   });
 }
 
-// Manager uploads materials (ex: images, pdfs)
-$("#uploadMaterialBtn")?.addEventListener("click", async () => {
+// Upload Material
+$("#materialUpload")?.addEventListener("click", async () => {
   const title = $("#matTitle").value.trim();
   const file = $("#matFile").files?.[0];
+
   if (!title || !file) return alert("Missing fields.");
 
   await createMaterial({
     title,
     file,
-    created_by: myId,
     zone,
-    roles: ["instructor", "client", "team_leader", "manager"],
+    created_by: myId,
+    roles: ["Instructor", "Client", "Team Leader", "Manager"],
   });
 
   $("#matTitle").value = "";
@@ -198,20 +194,18 @@ $("#uploadMaterialBtn")?.addEventListener("click", async () => {
 });
 
 // =====================================================================
-// MESSAGING (zone-bound, plus user & role chat)
+// MESSAGING
 // =====================================================================
 function initMessaging() {
-  const msgList = $("#messageList");
+  const list = $("#messageList");
 
-  // Live subscription
   subscribeMessages(myId, (msg) => {
     const el = document.createElement("div");
     el.className = "msg-item";
     el.innerHTML = `<p><b>${msg.sender_name}:</b> ${msg.body}</p>`;
-    msgList.appendChild(el);
+    list.appendChild(el);
   });
 
-  // Send message
   $("#sendMsgBtn").onclick = async () => {
     const text = $("#msgInput").value.trim();
     if (!text) return;
@@ -228,20 +222,20 @@ function initMessaging() {
 }
 
 // =====================================================================
-// LIVE LOCATION STREAM (instructors only)
+// LIVE LOCATION STREAM — Instructors in zone
 // =====================================================================
 function initLiveLocations() {
   const box = $("#liveLocBox");
 
-  getLiveLocationsStream(zone, (loc) => {
+  getLiveLocationsStream(zone, (point) => {
     const p = document.createElement("p");
-    p.textContent = `${loc.user_name}: ${loc.lat}, ${loc.lng}`;
+    p.textContent = `${point.user_name}: ${point.lat}, ${point.lng}`;
     box.appendChild(p);
   });
 }
 
 // =====================================================================
-// CLOCK IN / CLOCK OUT
+// CLOCK CONTROLS
 // =====================================================================
 function initClockControls() {
   $("#clockInBtn").onclick = () => clockIn(myId);
@@ -252,6 +246,5 @@ function initClockControls() {
 // LOGOUT
 // =====================================================================
 $("#logoutBtn").onclick = async () => {
-  await signOut();
-  location.href = "/html/login.html";
+  await logout();
 };

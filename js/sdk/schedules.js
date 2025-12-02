@@ -1,175 +1,231 @@
+// /js/sdk/schedules.js
+// Unified schedule SDK for TL, Instructor, Client, Admin, Manager.
+// All visibility is handled by RLS automatically.
+
 import { supabase } from "./supabaseClient.js";
 
-/**
- * Get all schedules visible to the logged-in user.
- * RLS enforces:
- * - Instructor → sees their lessons
- * - TL → sees lessons for instructors they manage
- * - Manager/Admin → sees by zone
- * - Supervisor → sees all
- */
-export async function getAllSchedules() {
-    const { data, error } = await supabase
-        .from("schedules")
-        .select(`
-            *,
-            routes(*),
-            instructor:profiles!instructor_id(*),
-            client:profiles!client_id(*)
-        `)
-        .order("slot_start", { ascending: true });
+/* =====================================================================
+   FETCH ALL VISIBLE SCHEDULES (global reader)
+   (Supervisor → all, Admin/Manager → zone, TL → instructors, etc.)
+===================================================================== */
+export async function getAllSchedules(zone = null) {
+  let q = supabase
+    .from("schedules")
+    .select(`
+        *,
+        instructor:profiles!instructor_id(*),
+        client:profiles!client_id(*)
+    `)
+    .order("slot_start", { ascending: true });
 
-    if (error) throw error;
-    return data;
+  if (zone) q = q.eq("zone_type", zone);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Get schedules for a specific instructor
- */
-export async function getInstructorSchedules(instructorId) {
-    const { data, error } = await supabase
-        .from("schedules")
-        .select(`
-            *,
-            routes(*),
-            client:profiles!client_id(*)
-        `)
-        .eq("instructor_id", instructorId)
-        .order("slot_start");
+/* =====================================================================
+   INSTRUCTOR — get availability + booked lessons
+===================================================================== */
+export async function getInstructorSlots(instructorId, zone = null) {
+  let q = supabase
+    .from("schedules")
+    .select("*")
+    .eq("instructor_id", instructorId)
+    .order("slot_start");
 
-    if (error) throw error;
-    return data;
+  if (zone) q = q.eq("zone_type", zone);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Get schedules for a specific client
- */
-export async function getClientSchedules(clientId) {
-    const { data, error } = await supabase
-        .from("schedules")
-        .select(`
-            *,
-            routes(*),
-            instructor:profiles!instructor_id(*)
-        `)
-        .eq("client_id", clientId)
-        .order("slot_start");
+/* =====================================================================
+   CLIENT — get lessons
+===================================================================== */
+export async function getMyLessons(clientId, zone = null) {
+  let q = supabase
+    .from("schedules")
+    .select(`
+        *,
+        instructor:profiles!instructor_id(*)
+    `)
+    .eq("client_id", clientId)
+    .order("slot_start");
 
-    if (error) throw error;
-    return data;
+  if (zone) q = q.eq("zone_type", zone);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Create a time slot (Manager or TL)
- * Typical use:
- * TL adds instructor availability
- */
-export async function createSchedule(scheduleData) {
-    const { data, error } = await supabase
-        .from("schedules")
-        .insert(scheduleData)
-        .select()
-        .single();
+/* =====================================================================
+   TEAM LEADER — see zone instructor schedules
+===================================================================== */
+export async function getSchedulesForTL(tlId) {
+  const { data, error } = await supabase
+    .from("schedules")
+    .select(`
+        *,
+        instructor:profiles!instructor_id(*),
+        client:profiles!client_id(*)
+    `)
+    .eq("team_leader_id", tlId)
+    .order("slot_start");
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Update a schedule — used for:
- * - Marking as booked
- * - Rescheduling
- * - Assigning client
- * - Assigning instructor
- * - Adding route
- */
-export async function updateSchedule(scheduleId, updateData) {
-    const { data, error } = await supabase
-        .from("schedules")
-        .update(updateData)
-        .eq("id", scheduleId)
-        .select()
-        .single();
+/* =====================================================================
+   CREATE AVAILABILITY SLOT (TL or Manager)
+===================================================================== */
+export async function createScheduleSlot({ instructor_id, date, start, end, zone_type }) {
+  const slot_start = `${date}T${start}:00`;
+  const slot_end   = `${date}T${end}:00`;
 
-    if (error) throw error;
-    return data;
+  const { data, error } = await supabase
+    .from("schedules")
+    .insert({
+      instructor_id,
+      slot_start,
+      slot_end,
+      zone_type,
+      status: "available"
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Delete a schedule — for Admin / Manager / TL
- */
-export async function deleteSchedule(scheduleId) {
-    const { error } = await supabase
-        .from("schedules")
-        .delete()
-        .eq("id", scheduleId);
-
-    if (error) throw error;
-    return true;
-}
-
-/**
- * Assign a route to an existing schedule
- */
-export async function attachRoute(scheduleId, routeId) {
-    const { data, error } = await supabase
-        .from("schedules")
-        .update({ route_id: routeId })
-        .eq("id", scheduleId)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return data;
-}
-
-/**
- * Assign client to schedule (turn "free slot" → "booked lesson")
- */
+/* =====================================================================
+   BOOK SLOT (TL or Client)
+===================================================================== */
 export async function bookSchedule(scheduleId, clientId) {
-    const { data, error } = await supabase
-        .from("schedules")
-        .update({
-            client_id: clientId,
-            status: "booked"
-        })
-        .eq("id", scheduleId)
-        .select()
-        .single();
+  const { data, error } = await supabase
+    .from("schedules")
+    .update({
+      client_id: clientId,
+      status: "booked"
+    })
+    .eq("id", scheduleId)
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Cancel a booking (Client or TL)
- */
-export async function cancelSchedule(scheduleId, reason = null) {
-    const { data, error } = await supabase
-        .from("schedules")
-        .update({
-            client_id: null,
-            status: "cancelled",
-            cancel_reason: reason
-        })
-        .eq("id", scheduleId)
-        .select()
-        .single();
+/* =====================================================================
+   REQUEST LESSON CANCELLATION (Client)
+===================================================================== */
+export async function requestCancelLesson(scheduleId) {
+  const { data, error } = await supabase
+    .from("schedules")
+    .update({
+      status: "cancel_requested"
+    })
+    .eq("id", scheduleId)
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return data;
 }
 
-/**
- * Subscribe to live schedule updates
- */
-export function subscribeToSchedules(callback) {
-    return supabase
-        .channel("schedules_changes")
-        .on(
-            "postgres_changes",
-            { event: "*", schema: "public", table: "schedules" },
-            payload => callback(payload)
-        )
-        .subscribe();
+/* =====================================================================
+   TEAM LEADER APPROVES / DECLINES CANCELLATION
+===================================================================== */
+export async function approveCancel(scheduleId) {
+  const { data, error } = await supabase
+    .from("schedules")
+    .update({
+      client_id: null,
+      status: "cancelled"
+    })
+    .eq("id", scheduleId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function declineCancel(scheduleId) {
+  const { data, error } = await supabase
+    .from("schedules")
+    .update({
+      status: "booked"
+    })
+    .eq("id", scheduleId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/* =====================================================================
+   DELETE SLOT (TL/Admin)
+===================================================================== */
+export async function deleteSlot(scheduleId) {
+  const { error } = await supabase
+    .from("schedules")
+    .delete()
+    .eq("id", scheduleId);
+
+  if (error) throw error;
+  return true;
+}
+
+/* =====================================================================
+   MARK SLOT AS AVAILABLE AGAIN (remove client)
+===================================================================== */
+export async function markSlotAvailable(scheduleId) {
+  const { data, error } = await supabase
+    .from("schedules")
+    .update({
+      client_id: null,
+      status: "available"
+    })
+    .eq("id", scheduleId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/* =====================================================================
+   ROUTE ATTACH
+===================================================================== */
+export async function attachRoute(scheduleId, routeId) {
+  const { data, error } = await supabase
+    .from("schedules")
+    .update({ route_id: routeId })
+    .eq("id", scheduleId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/* =====================================================================
+   REALTIME SUBSCRIPTION
+===================================================================== */
+export function subscribeSchedules(callback) {
+  return supabase
+    .channel("schedules_changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "schedules" },
+      (payload) => callback(payload)
+    )
+    .subscribe();
 }

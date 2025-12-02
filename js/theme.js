@@ -1,115 +1,138 @@
 // /js/theme.js
-// Robust theme manager: system-aware, persistent, multi-tab sync.
+// Smart theme manager: system-aware, persistent, cross-tab synced.
 
 const STORAGE_KEY = "ahds-theme"; // "light" | "dark" | "system"
-const DATA_ATTR = "data-theme";   // set on <html>
+const DATA_ATTR = "data-theme";   // applied to <html>
+
 const THEME_LIGHT = "light";
 const THEME_DARK = "dark";
 const THEME_SYSTEM = "system";
 
-// Read saved pref; default to "system"
+
+// -------------------------------------------------------------
+// Helpers
+// -------------------------------------------------------------
 function getSavedPref() {
   const v = localStorage.getItem(STORAGE_KEY);
-  return v === THEME_LIGHT || v === THEME_DARK || v === THEME_SYSTEM ? v : THEME_SYSTEM;
+  if (v === THEME_LIGHT || v === THEME_DARK || v === THEME_SYSTEM) return v;
+  return THEME_SYSTEM;
 }
 
-// Match current system dark mode
 function systemPrefIsDark() {
-  return globalThis.matchMedia && globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+  return matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-// Compute the effective theme ("light"|"dark") from pref
-function computeEffectiveTheme(pref) {
+function computeEffective(pref) {
   if (pref === THEME_LIGHT) return THEME_LIGHT;
   if (pref === THEME_DARK) return THEME_DARK;
   return systemPrefIsDark() ? THEME_DARK : THEME_LIGHT;
 }
 
-// Apply theme to <html> attribute and update toggle icons/labels
+
+// -------------------------------------------------------------
+// Apply theme to DOM
+// -------------------------------------------------------------
 function applyTheme(pref = getSavedPref()) {
-  const effective = computeEffectiveTheme(pref);
+  const effective = computeEffective(pref);
+
   document.documentElement.setAttribute(DATA_ATTR, effective);
 
-  // Update any toggle buttons to reflect the *resulting* theme
-  document.querySelectorAll("[data-theme-toggle]").forEach(btn => {
-    // Simple icon content state; you can style with CSS masks/SVG background
+  // Update toggle buttons to reflect REAL resulting state
+  document.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
     btn.setAttribute("aria-pressed", effective === THEME_DARK ? "true" : "false");
-    btn.title = effective === THEME_DARK ? "Switch to light mode" : "Switch to dark mode";
-    // Optional: swap an icon class
-    btn.dataset.icon = effective; // "light" or "dark"
+    btn.dataset.icon = effective; // CSS can style icons based on light/dark
+    btn.title =
+      effective === THEME_DARK ? "Switch to light mode" : "Switch to dark mode";
   });
 }
 
-// Persist a new preference
+
+// -------------------------------------------------------------
+// Persistence + Toggles
+// -------------------------------------------------------------
 function setPref(pref) {
   localStorage.setItem(STORAGE_KEY, pref);
   applyTheme(pref);
 }
 
-// Cycle light ↔ dark (ignore "system" on click for simplicity)
 function toggleTheme() {
-  const current = document.documentElement.getAttribute(DATA_ATTR) || computeEffectiveTheme(getSavedPref());
+  const current =
+    document.documentElement.getAttribute(DATA_ATTR) ||
+    computeEffective(getSavedPref());
+
   const next = current === THEME_DARK ? THEME_LIGHT : THEME_DARK;
   setPref(next);
 }
 
-// React to OS theme changes *only* when pref = system
-function handleSystemChange(e) {
-  if (getSavedPref() === THEME_SYSTEM) applyTheme(THEME_SYSTEM);
+
+// -------------------------------------------------------------
+// Reactive Behavior (system & multi-tab)
+// -------------------------------------------------------------
+function handleSystemChange() {
+  if (getSavedPref() === THEME_SYSTEM) {
+    applyTheme(THEME_SYSTEM);
+  }
 }
 
-// Keep tabs/windows in sync
 function handleStorageSync(e) {
-  if (e.key === STORAGE_KEY) applyTheme(getSavedPref());
+  if (e.key === STORAGE_KEY) {
+    applyTheme(getSavedPref());
+  }
 }
 
-// Public init: call this once on every page
+
+// -------------------------------------------------------------
+// INIT — Call on every page
+// -------------------------------------------------------------
 export function initTheme() {
-  // Initial paint
+  // 1. First paint
   applyTheme(getSavedPref());
 
-  // Wire all toggles
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-theme-toggle]");
+  // 2. Click toggles
+  document.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-theme-toggle]");
     if (!btn) return;
-    e.preventDefault();
+    ev.preventDefault();
     toggleTheme();
   });
 
-  // Optional: long-press on toggle -> cycle system/light/dark
-  document.querySelectorAll("[data-theme-toggle]").forEach(btn => {
-    let pressTimer;
+  // 3. Long-press to cycle system → light → dark → system
+  document.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
+    let timer;
     btn.addEventListener("mousedown", () => {
-      pressTimer = setTimeout(() => {
-        const pref = getSavedPref();
+      timer = setTimeout(() => {
+        const p = getSavedPref();
         const next =
-          pref === THEME_SYSTEM ? THEME_LIGHT :
-          pref === THEME_LIGHT  ? THEME_DARK  :
-                                  THEME_SYSTEM;
+          p === THEME_SYSTEM ? THEME_LIGHT :
+          p === THEME_LIGHT  ? THEME_DARK  :
+                               THEME_SYSTEM;
         setPref(next);
-      }, 650); // hold to cycle mode strategy
+      }, 650);
     });
-    ["mouseup","mouseleave","touchend","touchcancel"].forEach(ev =>
-      btn.addEventListener(ev, () => clearTimeout(pressTimer))
+
+    ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((ev) =>
+      btn.addEventListener(ev, () => clearTimeout(timer))
     );
   });
 
-  // System changes
-  if (globalThis.matchMedia) {
-    const mq = globalThis.matchMedia("(prefers-color-scheme: dark)");
-    mq.addEventListener?.("change", handleSystemChange);
-    // Safari fallback:
-    mq.addListener?.(handleSystemChange);
-  }
+  // 4. System theme changes
+  const mq = matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", handleSystemChange);
+  mq.addListener?.(handleSystemChange); // Safari fallback
 
-  // Cross-tab sync
-  globalThis.addEventListener("storage", handleStorageSync);
+  // 5. Multi-tab sync
+  addEventListener("storage", handleStorageSync);
 }
 
-// Expose helpers if you ever need them
+
+// -------------------------------------------------------------
+// Optional public API
+// -------------------------------------------------------------
 export const Theme = {
   getPref: getSavedPref,
   setPref,
   toggle: toggleTheme,
-  effective: () => document.documentElement.getAttribute(DATA_ATTR) || computeEffectiveTheme(getSavedPref()),
+  effective: () =>
+    document.documentElement.getAttribute(DATA_ATTR) ||
+    computeEffective(getSavedPref()),
 };

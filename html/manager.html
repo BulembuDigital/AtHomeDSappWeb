@@ -1,29 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Manager · At Home Driving School</title>
 
-  <!-- Base styles -->
-  <link rel="stylesheet" href="/css/base.css">
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180.png">
 
-  <!-- Theme + Splash -->
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/ui-sparkle.css">
+  <link rel="stylesheet" href="/css/splash.css">
+
+  <!-- Theme + UI controllers -->
   <script defer src="/js/theme.js"></script>
+  <script defer src="/js/ui-sparkle.js"></script>
   <script defer src="/js/splash.js"></script>
 
   <!-- Supabase -->
   <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script defer src="/js/supabaseClient.js"></script>
 
-  <!-- SDK modules -->
-  <script defer src="/js/sdk/supabaseClient.js"></script>
+  <!-- SDK -->
   <script type="module" src="/js/sdk/auth.js"></script>
   <script type="module" src="/js/sdk/profiles.js"></script>
   <script type="module" src="/js/sdk/materials.js"></script>
   <script type="module" src="/js/sdk/messages.js"></script>
   <script type="module" src="/js/sdk/clockEvents.js"></script>
 
-  <!-- Page logic -->
+  <!-- Page Logic -->
   <script type="module" src="/js/manager.js"></script>
 
   <style>
@@ -38,6 +45,7 @@
       font-weight:700;
       color:var(--text-dim);
       border:1px solid transparent;
+      transition:.25s ease;
     }
     .tab.active {
       background:var(--bg-elev);
@@ -48,34 +56,38 @@
     .tab.active::after {
       content:"";
       position:absolute;
-      left:12px;
-      right:12px;
-      bottom:-1px;
-      height:2px;
-      background:var(--accent);
+      left:12px; right:12px; bottom:-1px;
+      height:2px; background:var(--accent);
+      border-radius:2px;
     }
-    .panel { display:none; padding-top:20px; }
-    .panel.active { display:block; animation:fade .25s; }
+
+    .panel {
+      display:none;
+      padding-top:20px;
+      animation:fade .25s ease;
+    }
+    .panel.active { display:block; }
+
     @keyframes fade { from{opacity:0;} to{opacity:1;} }
 
     .avatar {
-      width:92px;
-      height:92px;
-      border-radius:50%;
-      object-fit:cover;
+      width:92px; height:92px;
+      border-radius:50%; object-fit:cover;
       border:2px solid var(--border);
     }
 
-    .list-row {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:12px 0;
-      border-bottom:1px solid var(--border);
+    .upload-box {
+      padding:16px;
+      border-radius:14px;
+      background:var(--bg-elev);
+      border:1px solid var(--border);
+      margin-bottom:20px;
     }
 
     .msg-wrap {
-      display:grid; grid-template-columns:300px 1fr; gap:12px;
+      display:grid;
+      grid-template-columns:300px 1fr;
+      gap:12px;
     }
     @media (max-width:900px){
       .msg-wrap { grid-template-columns:1fr; }
@@ -103,26 +115,35 @@
       background:var(--bg-elev);
       border:1px solid var(--border);
     }
-
-    .upload-box {
-      padding:16px;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background:var(--bg-elev);
-      margin-bottom:20px;
-    }
-
   </style>
 </head>
 
-<body>
+<body class="soft-page">
+
+<!-- Splash Screen -->
+<div class="splash-overlay show">
+  <div class="splash">
+    <div class="logo-wrap">
+      <img class="logo" src="/icons/logo-512.png" alt="Logo">
+      <div class="glow"></div>
+      <div class="bloom"></div>
+    </div>
+    <div class="loader">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+</div>
 
 <header class="header card-gradient">
-  <div class="brand"><span class="dot"></span> At Home Driving School</div>
+  <div class="brand">
+    <span class="dot"></span> Manager Dashboard
+  </div>
 
-  <div class="row">
+  <div class="row" style="gap:12px;">
     <button class="btn" onclick="location.href='/html/home.html'">Home</button>
-    <button class="btn" onclick="location.href='/html/login.html'">Switch</button>
+    <button class="btn danger" id="logoutBtn">Logout</button>
     <button class="theme-toggle" data-theme-toggle></button>
   </div>
 </header>
@@ -147,19 +168,23 @@
 
       <div class="upload-box">
         <h3>Upload New Material</h3>
-        <div class="col" style="gap:8px;">
-          <input id="matTitle" class="btn" placeholder="Title"/>
+
+        <div class="col" style="gap:10px;">
+          <input id="matTitle" class="btn" placeholder="Title">
           <select id="matType" class="btn">
             <option value="file">File</option>
             <option value="link">Link</option>
           </select>
-          <input id="matFile" type="file" class="btn"/>
-          <input id="matLink" class="btn" placeholder="https://..." style="display:none;"/>
+
+          <input id="matFile" type="file" class="btn">
+          <input id="matLink" class="btn" placeholder="https://..." style="display:none;">
+
           <button id="matUpload" class="btn primary">Upload</button>
         </div>
       </div>
 
       <button id="matRefresh" class="btn">Refresh List</button>
+
       <div id="matList" class="spaced"></div>
 
     </div>
@@ -173,9 +198,9 @@
 
       <div class="upload-box">
         <h3>Create Quiz</h3>
-        <div class="col" style="gap:8px;">
-          <input id="quizTitle" class="btn" placeholder="Quiz Title"/>
-          <textarea id="quizBody" rows="3" class="btn" placeholder="Question text..."></textarea>
+        <div class="col" style="gap:10px;">
+          <input id="quizTitle" class="btn" placeholder="Quiz title">
+          <textarea id="quizBody" class="btn" rows="3" placeholder="Question text..."></textarea>
           <button id="quizCreate" class="btn primary">Create Quiz</button>
         </div>
       </div>
@@ -189,10 +214,8 @@
   <!-- COMPLAINTS -->
   <section class="panel" data-panel="complaints">
     <div class="card card-gradient pad">
-
       <h2>Complaints From Team Leaders</h2>
       <div id="complaintsList"></div>
-
     </div>
   </section>
 
@@ -202,20 +225,19 @@
 
       <div class="msg-wrap">
 
-        <!-- Thread List -->
         <aside>
-          <input id="searchUser" class="btn" placeholder="Search Instructor/TL…"/>
+          <input id="searchUser" class="btn" placeholder="Search Instructor/TL…">
           <div id="threadList" class="spaced"></div>
         </aside>
 
-        <!-- Thread -->
         <section>
           <div id="threadBox"
-               style="height:48vh;overflow:auto;border:1px solid var(--border);
-                      border-radius:12px;padding:12px;background:var(--bg-elev);"></div>
+            style="height:48vh;overflow:auto;border:1px solid var(--border);
+                   border-radius:12px;padding:12px;background:var(--bg-elev);">
+          </div>
 
           <div class="row" style="gap:10px;margin-top:12px;">
-            <textarea id="msgBody" rows="2" class="btn" style="flex:1;" placeholder="Message…"></textarea>
+            <textarea id="msgBody" class="btn" rows="2" style="flex:1;" placeholder="Message…"></textarea>
             <button id="sendMsg" class="btn primary">Send</button>
           </div>
         </section>
@@ -241,16 +263,16 @@
     <div class="card card-gradient pad">
 
       <div class="row" style="gap:18px;">
-        <img id="avatar" class="avatar" alt="avatar"/>
+        <img id="avatar" class="avatar" alt="avatar">
         <div class="col">
-          <input id="avatarFile" type="file" accept="image/*" class="btn"/>
+          <input id="avatarFile" type="file" accept="image/*" class="btn">
           <small class="muted">JPG/PNG up to 5MB</small>
         </div>
       </div>
 
       <div class="row wrap" style="gap:12px;margin-top:16px;">
-        <input id="name" class="btn" placeholder="Full name" style="min-width:220px;"/>
-        <input id="phone" class="btn" placeholder="Phone (+27…)" style="min-width:200px;"/>
+        <input id="name" class="btn" placeholder="Full name" style="min-width:220px;">
+        <input id="phone" class="btn" placeholder="Phone (+27627409493)" style="min-width:200px;">
         <button id="saveProfile" class="btn primary">Save Profile</button>
       </div>
 
@@ -259,7 +281,14 @@
 
 </main>
 
-<footer class="footer">A property of <span class="glow">SAHA</span></footer>
+<footer class="footer">
+  A property of <span class="glow">SAHA</span>
+</footer>
+
+<script type="module">
+  import { logout } from "/js/sdk/auth.js";
+  document.getElementById("logoutBtn").onclick = logout;
+</script>
 
 </body>
 </html>

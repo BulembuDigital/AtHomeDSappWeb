@@ -1,90 +1,92 @@
-// js/splash.js — updated to match the new polished splash.css
+// /js/splash.js
+// Unified splash controller:
+// 1) First-visit full-screen SAHA splash
+// 2) Reusable in-app "Loading…" overlay
 
-const SPLASH_ID = "ahds-splash-overlay";
-let shownAt = 0;
+/* ----------------------------------------------------
+   FIRST VISIT — BRAND SPLASH
+---------------------------------------------------- */
+(function initBrandSplash() {
+  const splash = document.getElementById("splash");
 
-/**
- * Show the splash overlay.
- * @param {string} message   The small tagline text.
- * @param {number} minMs     Minimum visible time.
- * @param {number} maxMs     Maximum before auto-hide.
- */
-export function showSplash(message = "Loading…", minMs = 350, maxMs = 8000) {
-  shownAt = performance.now();
-  let el = document.getElementById(SPLASH_ID);
+  if (!splash) return; // page doesn't have splash markup
 
-  if (!el) {
-    el = document.createElement("div");
-    el.id = SPLASH_ID;
-    el.className = "splash-overlay";
+  const hasSeen = localStorage.getItem("saha_splash_seen");
 
-    el.innerHTML = `
-      <div class="splash">
-        <div class="logo-wrap">
-          <div class="glow"></div>
-          <div class="bloom"></div>
-          <img class="logo" src="/images/logo.png" alt="logo" />
-        </div>
-
-        <h1 class="brand-text">At Home Driving School</h1>
-        <p class="tagline splash-message"></p>
-
-        <div class="loader">
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-        </div>
-
-        <div class="footer-note">
-          Powered by <span class="glow">SAHA</span>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(el);
+  if (hasSeen) {
+    // Hide instantly on all future visits
+    splash.style.display = "none";
+    return;
   }
 
-  // Update message
-  el.querySelector(".splash-message").textContent = message;
+  // Mark as seen
+  localStorage.setItem("saha_splash_seen", "yes");
 
-  // Show it
-  el.classList.add("show");
-  el.classList.remove("hide");
+  // Auto-hide after animation time
+  setTimeout(() => {
+    splash.classList.add("hide");
 
-  // Safeguard: auto-hide after maxMs
-  clearTimeout(el._maxTimer);
-  el._minMs = minMs;
-  el._maxTimer = setTimeout(() => forceHide(el), maxMs);
+    // Fully remove from layout
+    setTimeout(() => {
+      splash.style.display = "none";
+    }, 350);
+  }, 1400);
+})();
+
+
+/* ----------------------------------------------------
+   PROGRAMMATIC SPLASH (used in dashboard JS)
+   showSplash("Loading…")
+   hideSplash()
+---------------------------------------------------- */
+
+let appSplash = null;
+
+function ensureAppSplash() {
+  if (appSplash) return appSplash;
+
+  appSplash = document.createElement("div");
+  appSplash.id = "app-splash";
+  appSplash.style.position = "fixed";
+  appSplash.style.inset = "0";
+  appSplash.style.display = "none";
+  appSplash.style.background = "rgba(0,0,0,0.55)";
+  appSplash.style.backdropFilter = "blur(4px)";
+  appSplash.style.zIndex = "9999";
+  appSplash.style.display = "grid";
+  appSplash.style.placeItems = "center";
+
+  const box = document.createElement("div");
+  box.style.padding = "20px 28px";
+  box.style.borderRadius = "16px";
+  box.style.background = "var(--bg-elev)";
+  box.style.color = "var(--text)";
+  box.style.fontSize = "17px";
+  box.style.boxShadow = "0 4px 14px rgba(0,0,0,0.35)";
+  box.id = "app-splash-text";
+  box.textContent = "Loading…";
+
+  appSplash.appendChild(box);
+  document.body.appendChild(appSplash);
+
+  return appSplash;
 }
 
 /**
- * Hide the splash screen if minimum display time has passed.
+ * Show an in-app splash overlay with optional text.
  */
-export async function hideSplash() {
-  const el = document.getElementById(SPLASH_ID);
-  if (!el) return;
+export function showSplash(text = "Loading…") {
+  const el = ensureAppSplash();
+  const box = document.getElementById("app-splash-text");
 
-  const elapsed = performance.now() - shownAt;
-  const wait = Math.max(0, (el._minMs || 0) - elapsed);
-
-  await new Promise((r) => setTimeout(r, wait));
-  forceHide(el);
+  if (box) box.textContent = text;
+  el.style.display = "grid";
 }
 
 /**
- * Immediately hide + remove splash with transition.
+ * Hide in-app overlay
  */
-function forceHide(el) {
-  if (!el || el.classList.contains("hide")) return;
-
-  el.classList.add("hide");
-  el.classList.remove("show");
-  clearTimeout(el._maxTimer);
-
-  // Remove after fade-out transition
-  const cleanup = () => el.remove();
-  el.addEventListener("transitionend", cleanup, { once: true });
-
-  // Fallback
-  setTimeout(cleanup, 650);
+export function hideSplash() {
+  if (!appSplash) return;
+  appSplash.style.display = "none";
 }

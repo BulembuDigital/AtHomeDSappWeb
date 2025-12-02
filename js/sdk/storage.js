@@ -1,25 +1,28 @@
+// /js/sdk/storage.js
+// Unified, safe storage helpers for avatars, materials, routes & generic uploads.
+
 import { supabase } from "./supabaseClient.js";
 
-/* -----------------------------------------------------------
-   HELPERS
------------------------------------------------------------ */
+/* ============================================================
+   INTERNAL HELPERS
+============================================================ */
 
 function extOf(name = "") {
   return name.split(".").pop()?.toLowerCase() || "bin";
 }
 
 function safePath(id, file) {
-  const e = extOf(file.name);
-  return `${id}.${e}`;
+  const ext = extOf(file.name);
+  return `${id}.${ext}`;
 }
 
-/* -----------------------------------------------------------
-   1. AVATARS (bucket: avatars)
------------------------------------------------------------ */
+/* ============================================================
+   1. AVATARS  (bucket: avatars)
+============================================================ */
 
 export async function uploadAvatar(userId, file) {
   if (!file) throw new Error("No file selected");
-  if (file.size > 5 * 1024 * 1024) throw new Error("Max 5MB");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Max avatar size is 5MB");
 
   const path = safePath(userId, file);
 
@@ -45,16 +48,17 @@ export async function getAvatarUrl(path) {
   return data?.signedUrl || null;
 }
 
-/* -----------------------------------------------------------
+/* ============================================================
    2. MATERIALS (bucket: materials)
------------------------------------------------------------ */
+   Used by Manager / Admin / Supervisor dashboards
+============================================================ */
 
 export async function uploadMaterial(file, folder = "uploads") {
-  if (!file) throw new Error("No file");
+  if (!file) throw new Error("No file selected");
 
   const ext = extOf(file.name);
-  const unique = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const path = `${folder}/${unique}.${ext}`;
+  const uniq = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const path = `${folder}/${uniq}.${ext}`;
 
   const { error } = await supabase.storage
     .from("materials")
@@ -89,17 +93,18 @@ export async function deleteMaterial(path) {
   if (error) throw error;
 }
 
-/* -----------------------------------------------------------
-   3. GEOJSON ROUTES (bucket: routes)
------------------------------------------------------------ */
+/* ============================================================
+   3. ROUTE GEOJSON (bucket: routes)
+   Used by TL & Instructors' route planners
+============================================================ */
 
 export async function uploadRouteGeoJSON(jsonObj, filename = "route.geojson") {
   const blob = new Blob([JSON.stringify(jsonObj)], {
     type: "application/geo+json"
   });
 
-  const unique = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const path = `${unique}_${filename}`;
+  const uniq = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const path = `${uniq}_${filename}`;
 
   const { error } = await supabase.storage
     .from("routes")
@@ -109,6 +114,7 @@ export async function uploadRouteGeoJSON(jsonObj, filename = "route.geojson") {
     });
 
   if (error) throw error;
+
   return path;
 }
 
@@ -123,9 +129,9 @@ export async function getRouteGeoJSON(path) {
   return JSON.parse(text);
 }
 
-/* -----------------------------------------------------------
-   4. GENERIC STORAGE HELPERS (any bucket)
------------------------------------------------------------ */
+/* ============================================================
+   4. GENERIC BUCKET HELPERS
+============================================================ */
 
 export async function uploadFile(bucket, path, file, opts = {}) {
   const { error } = await supabase.storage
@@ -153,17 +159,16 @@ export async function deleteFile(bucket, path) {
   if (error) throw error;
 }
 
-/* -----------------------------------------------------------
-   FUTURE-PROOFING: thumbnails, compression, video transcodes
-   (these will be plugged into Storage Edge Functions later)
------------------------------------------------------------ */
+/* ============================================================
+   5. TYPE HELPERS (non-destructive)
+============================================================ */
 
 export function isImage(file) {
-  return file.type.startsWith("image/");
+  return file?.type?.startsWith?.("image/");
 }
 
 export function isVideo(file) {
-  return file.type.startsWith("video/");
+  return file?.type?.startsWith?.("video/");
 }
 
 export function isGeoJSON(path = "") {

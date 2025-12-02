@@ -1,36 +1,47 @@
-// ===================================================================
-// CLIENT DASHBOARD — CLEAN SDK VERSION
-// ===================================================================
+// ============================================================================
+// CLIENT DASHBOARD — FINAL VERSION (Matches Updated SDK + HTML)
+// ============================================================================
 
-import { getSession, signOut } from "./sdk/auth.js";
-import { getMyProfile } from "./sdk/profiles.js";
-import { getMyStudentsInstructor, getMyInstructor } from "./sdk/assignments.js";
-import { 
-    getMyLessons, 
-    requestCancelLesson 
-} from "./sdk/schedules.js";
-import { getMaterialsByZone } from "./sdk/materials.js";
-import { 
-    getThreadMessages, 
-    sendMessage, 
-    subscribeMessages 
-} from "./sdk/messages.js";
-import { getLiveLocationsStream } from "./sdk/livelocations.js";
-import { sendClockInEvent, sendClockOutEvent } from "./sdk/clockEvents.js";
+// --- AUTH -------------------------------------------------------------------
+import { getSession, logout } from "/js/sdk/auth.js";
 
-import { showSplash, hideSplash } from "./splash.js";
-import { initTheme } from "./theme.js";
+// --- PROFILES ---------------------------------------------------------------
+import { getProfileById } from "/js/sdk/profiles.js";
 
+// --- ASSIGNMENTS ------------------------------------------------------------
+import { getMyInstructor } from "/js/sdk/assignments.js";
 
-// --------------------------------------------------------------
-// INIT UI
-// --------------------------------------------------------------
-initTheme();
-showSplash("Loading...");
+// --- SCHEDULES --------------------------------------------------------------
+import {
+  getMyLessons,
+  requestCancelLesson
+} from "/js/sdk/schedules.js";
+
+// --- MATERIALS --------------------------------------------------------------
+import { getMaterialsByZone } from "/js/sdk/materials.js";
+
+// --- MESSAGES ---------------------------------------------------------------
+import {
+  getThreadMessages,
+  sendMessage,
+  subscribeMessages
+} from "/js/sdk/messages.js";
+
+// --- LIVE LOCATION ----------------------------------------------------------
+import { getLiveLocationsStream } from "/js/sdk/liveLocations.js";
+
+// --- CLOCK EVENTS -----------------------------------------------------------
+import { clockIn, clockOut } from "/js/sdk/clockEvents.js";
+
+// --- UI UTILITIES -----------------------------------------------------------
+import { showSplash, hideSplash } from "/js/splash.js";
+import { initTheme } from "/js/theme.js";
 
 const $ = id => document.getElementById(id);
 
-// State
+// ============================================================================
+// STATE
+// ============================================================================
 let me = null;
 let myId = null;
 let zone = null;
@@ -38,237 +49,223 @@ let instructor = null;
 let lessons = [];
 let materials = [];
 
-
-// --------------------------------------------------------------
+// ============================================================================
 // BOOT
-// --------------------------------------------------------------
+// ============================================================================
+initTheme();
+showSplash("Loading client dashboard…");
+
 async function boot() {
+  // SESSION ------------------------------------------------------------
+  const { userId } = await getSession();
+  if (!userId) return (location.href = "/html/login.html");
+  myId = userId;
 
-    // AUTH — redirect if not logged in
-    const { userId } = await getSession();
-    if (!userId) return location.href = "/html/login.html";
-    myId = userId;
+  // PROFILE -------------------------------------------------------------
+  me = await getProfileById(myId);
+  if (!me) return (location.href = "/html/signup.html");
 
-    // PROFILE
-    me = await getMyProfile();
-    if (!me) return location.href = "/html/signup-finish.html";
-    if (me.status !== "approved") return location.href = "/html/pending.html";
+  if (me.status !== "approved")
+    return (location.href = "/html/pending.html");
 
-    zone = me.zone;
+  zone = me.zone;
 
-    // LOAD DASHBOARD CONTENT
-    await loadDashboard();
+  // LOAD DASHBOARD DATA ------------------------------------------------
+  await loadDashboard();
 
-    // LIVE LOCATION STREAM
-    initLiveTracking();
+  // LIVE GPS -----------------------------------------------------------
+  initLiveTracking();
 
-    hideSplash();
+  hideSplash();
 }
 
+boot();
 
-// --------------------------------------------------------------
-// LOAD ALL CLIENT DASHBOARD DATA
-// --------------------------------------------------------------
+// ============================================================================
+// LOAD DASHBOARD
+// ============================================================================
 async function loadDashboard() {
-    // GET ASSIGNED INSTRUCTOR
-    instructor = await getMyInstructor(myId, zone);
+  instructor = await getMyInstructor(myId, zone);
+  lessons = await getMyLessons(myId);
+  materials = await getMaterialsByZone(zone);
 
-    // GET LESSONS
-    lessons = await getMyLessons(myId, zone);
-
-    // GET MATERIALS
-    materials = await getMaterialsByZone(zone);
-
-    renderProfile();
-    renderInstructor();
-    renderLessons();
-    renderMaterials();
+  renderProfile();
+  renderInstructor();
+  renderLessons();
+  renderMaterials();
 }
 
-
-
-// --------------------------------------------------------------
-// UI RENDERING
-// --------------------------------------------------------------
-
+// ============================================================================
+// RENDERING
+// ============================================================================
 function renderProfile() {
-    $("name").textContent = me.full_name;
-    $("role").textContent = "Client";
-    $("zone").textContent = me.zone;
+  if ($("name")) $("name").textContent = me.name;
+  if ($("zone")) $("zone").textContent = me.zone ?? "—";
 }
 
 function renderInstructor() {
-    const box = $("instructor-box");
+  const box = $("instructorBox");
+  if (!box) return;
 
-    if (!instructor) {
-        box.innerHTML = `<p>No instructor assigned yet.</p>`;
-        return;
-    }
+  if (!instructor) {
+    box.innerHTML = `<p>No instructor assigned yet.</p>`;
+    return;
+  }
 
-    box.innerHTML = `
-        <strong>${instructor.full_name}</strong>
-        <p>Email: ${instructor.email}</p>
-        <button id="chat-instructor">Chat</button>
-    `;
+  box.innerHTML = `
+    <strong>${instructor.name}</strong>
+    <p class="muted">${instructor.email ?? ""}</p>
+    <button id="chatInstructor" class="btn primary">Chat</button>
+  `;
 
-    $("chat-instructor").onclick = () => openChat(instructor.id);
+  $("chatInstructor").onclick = () => openChat(instructor.id);
 }
 
 function renderLessons() {
-    const box = $("lessons");
-    box.innerHTML = "";
+  const box = $("lessonList");
+  if (!box) return;
 
-    if (!lessons.length) {
-        box.innerHTML = "<p>No booked lessons yet.</p>";
-        return;
-    }
+  box.innerHTML = "";
 
-    lessons.forEach(lesson => {
-        const start = new Date(lesson.slot_start).toLocaleString();
-        const end   = new Date(lesson.slot_end).toLocaleString();
+  if (!lessons.length) {
+    box.innerHTML = `<p>No lessons booked yet.</p>`;
+    return;
+  }
 
-        const div = document.createElement("div");
-        div.className = "lesson-row";
+  lessons.forEach(lesson => {
+    const start = new Date(lesson.slot_start).toLocaleString();
+    const end = new Date(lesson.slot_end).toLocaleString();
 
-        div.innerHTML = `
-            <div>
-                <strong>${start}</strong> → ${end}
-            </div>
-            <button class="cancel-lesson" data-id="${lesson.id}">
-                Request Cancel
-            </button>
-        `;
+    const row = document.createElement("div");
+    row.className = "lesson-card";
+    row.innerHTML = `
+      <div>
+        <strong>${start}</strong><br />
+        Until: ${end}
+      </div>
+      <button class="btn small cancelLesson" data-id="${lesson.id}">
+        Cancel
+      </button>
+    `;
 
-        box.appendChild(div);
-    });
+    box.appendChild(row);
+  });
 
-    document.querySelectorAll(".cancel-lesson").forEach(btn => {
-        btn.onclick = async () => {
-            await requestCancelLesson(btn.dataset.id);
-            alert("Cancellation request sent to Team Leader.");
-            loadDashboard();
-        };
-    });
+  box.querySelectorAll(".cancelLesson").forEach(btn => {
+    btn.onclick = async () => {
+      await requestCancelLesson(btn.dataset.id);
+      alert("Cancellation request sent to Team Leader.");
+      loadDashboard();
+    };
+  });
 }
 
 function renderMaterials() {
-    const box = $("materials");
-    box.innerHTML = "";
+  const box = $("matList");
+  if (!box) return;
 
-    if (!materials.length) {
-        box.innerHTML = "<p>No study materials yet.</p>";
-        return;
-    }
+  box.innerHTML = "";
 
-    materials.forEach(m => {
-        const div = document.createElement("div");
-        div.className = "material-row";
-        div.innerHTML = `
-            <strong>${m.title}</strong>
-            <p>${m.description}</p>
-        `;
-        box.appendChild(div);
-    });
+  if (!materials.length) {
+    box.innerHTML = `<p>No materials available yet.</p>`;
+    return;
+  }
+
+  materials.forEach(m => {
+    const item = document.createElement("div");
+    item.className = "material-item";
+    item.innerHTML = `
+      <p><strong>${m.title}</strong></p>
+      <a href="${m.url}" class="btn small" target="_blank">Open</a>
+    `;
+    box.appendChild(item);
+  });
 }
 
-
-
-// ===================================================================
+// ============================================================================
 // CHAT SYSTEM
-// ===================================================================
-
+// ============================================================================
 async function openChat(targetId) {
-    showSplash("Loading chat...");
+  showSplash("Loading chat…");
 
-    const thread = [myId, targetId].sort().join("-");
+  const threadId = [myId, targetId].sort().join("-");
 
-    const history = await getThreadMessages(thread, zone);
-    renderChat(history);
+  const history = await getThreadMessages(threadId);
+  renderChat(history);
 
-    // Live updates
-    subscribeMessages(thread, msg => appendChat(msg));
+  $("chatBox").dataset.thread = threadId;
+  $("chatBox").dataset.target = targetId;
 
-    $("chat-box").dataset.target = targetId;
+  // Live updates
+  subscribeMessages(threadId, appendChat);
 
-    hideSplash();
+  hideSplash();
 }
 
 function renderChat(messages) {
-    const box = $("chat-box");
-    box.innerHTML = "";
-    messages.forEach(m => appendChat(m));
+  const box = $("chatBox");
+  box.innerHTML = "";
+  messages.forEach(appendChat);
 }
 
 function appendChat(msg) {
-    const box = $("chat-box");
-    const div = document.createElement("div");
+  const box = $("chatBox");
 
-    div.className = msg.sender_id === myId ? "msg-right" : "msg-left";
-    div.textContent = msg.body;
+  const div = document.createElement("div");
+  div.className = msg.sender_id === myId ? "msg me" : "msg other";
+  div.textContent = msg.body;
 
-    box.appendChild(div);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
 }
 
-$("send-chat").onclick = async () => {
-    const body = $("chat-input").value.trim();
-    if (!body) return;
+$("sendMsg").onclick = async () => {
+  const body = $("msgBody").value.trim();
+  if (!body) return;
 
-    const target = $("chat-box").dataset.target;
-    const thread = [myId, target].sort().join("-");
+  const thread = $("chatBox").dataset.thread;
+  const target = $("chatBox").dataset.target;
 
-    await sendMessage({
-        thread_id: thread,
-        to_user_id: target,
-        to_zone: zone,
-        scope: "user",
-        body
-    });
+  await sendMessage({
+    thread_id: thread,
+    scope: "user",
+    to_user_id: target,
+    body
+  });
 
-    $("chat-input").value = "";
+  $("msgBody").value = "";
 };
 
-
-
-// ===================================================================
-// LIVE LOCATION STREAMING
-// ===================================================================
-
+// ============================================================================
+// LIVE GPS
+// ============================================================================
 function initLiveTracking() {
-    getLiveLocationsStream(myId, point => {
-        $("gps-lat").textContent = point.lat.toFixed(6);
-        $("gps-lng").textContent = point.lng.toFixed(6);
-        $("gps-time").textContent = new Date(point.timestamp).toLocaleTimeString();
-    });
+  const latBox = $("gpsLat");
+  const lngBox = $("gpsLng");
+  const timeBox = $("gpsTime");
+  if (!latBox || !lngBox) return;
+
+  getLiveLocationsStream(myId, loc => {
+    latBox.textContent = loc.lat.toFixed(6);
+    lngBox.textContent = loc.lng.toFixed(6);
+    timeBox.textContent = new Date(loc.timestamp).toLocaleTimeString();
+  });
 }
 
+// ============================================================================
+// CLOCK IN / OUT
+// ============================================================================
+$("clockIn")?.addEventListener("click", async () => {
+  await clockIn(myId);
+  alert("Clocked in.");
+});
 
+$("clockOut")?.addEventListener("click", async () => {
+  await clockOut(myId);
+  alert("Clocked out.");
+});
 
-// ===================================================================
-// CLOCK IN / CLOCK OUT
-// ===================================================================
-
-$("clock-in").onclick = async () => {
-    await sendClockInEvent(myId, zone);
-    alert("Clocked in");
-};
-
-$("clock-out").onclick = async () => {
-    await sendClockOutEvent(myId, zone);
-    alert("Clocked out");
-};
-
-
-
-// ===================================================================
-// LOG OUT
-// ===================================================================
-
-$("logout").onclick = async () => {
-    await signOut();
-    location.href = "/html/login.html";
-};
-
-
-
-// ===================================================================
-boot();
+// ============================================================================
+// LOGOUT
+// ============================================================================
+$("logoutBtn")?.addEventListener("click", logout);

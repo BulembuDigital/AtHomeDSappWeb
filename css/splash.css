@@ -1,31 +1,48 @@
-/* /css/splash.css — refined for cleaner glow, smoother motion, and sharper hierarchy */
+/* ==========================================================
+   splash.css — Modern, theme-aware, perfectly on-brand
+   Uses tokens from base.css (accent, accent-2, text, text-dim)
+   ========================================================== */
 
+/* Overlay wrapper */
 .splash-overlay {
   position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
-  background: var(--bg, #0b0f1a);
+  background: var(--bg);
   z-index: 9999;
+
   opacity: 0;
-  transition: opacity .28s ease;
+  pointer-events: none;
+  transition: opacity .32s ease;
 }
 
-.splash-overlay.show { opacity: 1; }
-.splash-overlay.hide { opacity: 0; }
+.splash-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.splash-overlay.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------
+   MAIN SPLASH WRAPPER
+----------------------------------------------------------- */
 
 .splash {
   display: grid;
   place-items: center;
   gap: 14px;
-  padding: 24px;
+  padding: 26px;
   text-align: center;
-  color: var(--text, #e8eefc);
+  color: var(--text);
 }
 
-/* -------------------------
-   LOGO + FX
---------------------------*/
+/* ----------------------------------------------------------
+   LOGO + GLOW EFFECTS
+----------------------------------------------------------- */
 
 .logo-wrap {
   position: relative;
@@ -33,65 +50,78 @@
   height: 200px;
 }
 
+/* Crisp logo pop-in */
 .logo {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 18px rgba(51,132,255,.35));
-  animation: pop-in .55s ease both;
+
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 55%, transparent));
+
+  animation: pop-in .55s cubic-bezier(.25,.7,.4,1) both;
 }
 
-/* Smoothed glow that feels less “busy” */
+/* Dynamic blue + red glow field */
 .glow {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  filter: blur(30px);
+
+  /* Balanced ambient glow */
+  background:
+    radial-gradient(circle,
+      color-mix(in srgb, var(--accent) 35%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(circle,
+      color-mix(in srgb, var(--accent-2) 30%, transparent) 0%,
+      transparent 65%
+    );
+
   opacity: .55;
-  box-shadow:
-    0 0 90px 30px rgba(51,132,255,.28),
-    0 0 150px 50px rgba(238,68,68,.16);
+  filter: blur(32px);
   animation: pulse 2.4s ease-in-out infinite;
 }
 
-/* Subtle bloom around the logo to improve depth */
+/* Soft depth bloom */
 .bloom {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: inset 0 0 65px rgba(255,255,255,.05);
+
+  box-shadow: inset 0 0 60px rgba(255,255,255,.06);
   filter: blur(8px);
-  opacity: .4;
+  opacity: .45;
 }
 
-/* -------------------------
+/* ----------------------------------------------------------
    TEXT
---------------------------*/
+----------------------------------------------------------- */
 
 .brand-text {
-  margin-top: 4px;
+  margin-top: 6px;
+  font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: .35px;
-  font-size: 1.15rem;
   text-shadow: 0 1px 3px rgba(0,0,0,.25);
 }
 
 .tagline {
   margin: 0;
   font-size: .9rem;
-  color: var(--muted, #a9b7d9);
-  opacity: .9;
+  color: var(--text-dim);
+  opacity: .95;
 }
 
-/* -------------------------
-   LOADER
---------------------------*/
+/* ----------------------------------------------------------
+   LOADING DOTS
+----------------------------------------------------------- */
 
 .loader {
   display: inline-flex;
-  gap: 7px;
+  gap: 8px;
   margin-top: 10px;
 }
 
@@ -99,7 +129,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--accent);
   opacity: .7;
   transform: translateY(0);
   animation: bounce 1.25s infinite ease-in-out;
@@ -108,38 +138,49 @@
 .loader .dot:nth-child(2) { animation-delay: .15s; }
 .loader .dot:nth-child(3) { animation-delay: .30s; }
 
-/* -------------------------
+/* ----------------------------------------------------------
    FOOTER NOTE
---------------------------*/
+----------------------------------------------------------- */
 
 .footer-note {
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: .75rem;
-  color: var(--muted, #a9b7d9);
-  opacity: .9;
+  color: var(--text-dim);
 }
 
 .footer-note .glow {
   font-weight: 600;
-  color: var(--blue, #3384ff);
+  color: var(--accent);
   text-shadow:
-    0 0 4px rgba(51,132,255,.7),
-    0 0 8px rgba(51,132,255,.6),
-    0 0 12px rgba(51,132,255,.5);
+    0 0 4px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 8px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-/* -------------------------
+/* ----------------------------------------------------------
    ANIMATIONS
---------------------------*/
+----------------------------------------------------------- */
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: .85; }
-  50%      { transform: scale(1.04); opacity: 1; }
+  0%, 100% {
+    transform: scale(1);
+    opacity: .8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
 }
 
 @keyframes bounce {
-  0%, 80%, 100% { transform: translateY(0); opacity: .75; }
-  40%          { transform: translateY(-6px); opacity: 1; }
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: .75;
+  }
+  40% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
 }
 
 @keyframes pop-in {

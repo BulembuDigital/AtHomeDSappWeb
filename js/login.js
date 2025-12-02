@@ -1,42 +1,33 @@
-import { signInWithOtp, getSession } from "./sdk/auth.js";
-import { getProfileById } from "./sdk/profiles.js";
-import { dashboardPath } from "./sdk/supabaseClient.js";
+// ======================================================================
+// LOGIN PAGE (Magic Link OTP) — FINAL VERSION
+// ======================================================================
 
-const emailInput = document.getElementById("email");
-const sendBtn = document.getElementById("sendOtp");
-const verifyBtn = document.getElementById("verifyOtp");
-const otpInput = document.getElementById("otp");
+import { supabase } from "/js/supabaseClient.js";
 
-// STEP 1 — Send OTP
-sendBtn.addEventListener("click", async () => {
+// Button handler
+document.getElementById("loginBtn").addEventListener("click", sendLoginLink);
+
+async function sendLoginLink() {
+  const email = document.getElementById("email").value.trim();
+  if (!email) return alert("Enter your email address.");
+
   try {
-    const email = emailInput.value.trim().toLowerCase();
-    if (!email) return alert("Enter your email");
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: `${window.location.origin}/html/verify-otp.html`
+      }
+    });
 
-    await signInWithOtp(email);
-    alert("OTP sent. Check inbox.");
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-// STEP 2 — Verify OTP
-verifyBtn.addEventListener("click", async () => {
-  try {
-    const code = otpInput.value.trim();
-    if (!code) return alert("Enter OTP");
-
-    const { session, userId } = await getSession();
-
-    if (!userId) return alert("Invalid OTP");
-
-    const profile = await getProfileById(userId);
-    if (!profile) {
-      return location.href = "/html/signup-finish.html";
+    if (error) {
+      console.warn(error);
+      return alert(error.message || "Unable to send login link.");
     }
 
-    location.href = dashboardPath(profile.role);
+    alert("Check your email — the login link has been sent.");
   } catch (err) {
-    alert(err.message);
+    console.error(err);
+    alert("Network error sending login link.");
   }
-});
+}

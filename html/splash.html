@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Loading · At Home Driving School</title>
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-icon-180.png">
+
+  <!-- Core UI -->
+  <link rel="stylesheet" href="/css/base.css"/>
+  <link rel="stylesheet" href="/css/ui-sparkle.css"/>
+  <link rel="stylesheet" href="/css/splash.css"/>
+
+  <!-- Theme -->
+  <script defer src="/js/theme.js"></script>
+
+  <!-- Splash Controller -->
+  <script defer src="/js/splash.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: var(--bg);
+      display: grid;
+      height: 100vh;
+      place-items: center;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- Fullscreen Splash -->
+<div class="splash-overlay show" id="splash">
+
+  <div class="splash">
+
+    <!-- Logo Animation -->
+    <div class="logo-wrap">
+      <img src="/icons/logo-512.png" class="logo" alt="App Logo"/>
+      <div class="glow"></div>
+      <div class="bloom"></div>
+    </div>
+
+    <!-- Brand -->
+    <div class="brand-text">At Home Driving School</div>
+    <p class="tagline">Preparing better drivers, one lesson at a time.</p>
+
+    <!-- Loader -->
+    <div class="loader">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-note">
+      Powered by <span class="glow">SAHA</span>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

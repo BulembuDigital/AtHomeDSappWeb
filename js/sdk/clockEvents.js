@@ -1,111 +1,123 @@
+// /js/sdk/clockEvents.js
+// Unified + zone-consistent + RLS-safe
+
 import { supabase } from "./supabaseClient.js";
 
-/* -------------------------------------------------------
-   INSERT CLOCK EVENTS
-------------------------------------------------------- */
-
-/**
- * Generic method to insert a clock event.
- * 
- * RLS guarantees:
- *   - Users can only insert for themselves.
- *   - No one can fake timestamps for another user.
- */
+/* -------------------------------------------------------------
+   BASE EVENT INSERT
+   RLS guarantees:
+   - Users can only insert for themselves
+   - Supervisors/Admin/Manager cannot fake other users’ events
+   - TL sees only instructors/clients in their zone (via RLS)
+------------------------------------------------------------- */
 export async function addClockEvent(myId, type, meta = {}) {
-    const { error } = await supabase
-        .from("clock_events")
-        .insert({
-            user_id: myId,
-            type,
-            ts: new Date().toISOString(),
-            meta
-        });
+  const { error } = await supabase
+    .from("clock_events")
+    .insert({
+      user_id: myId,
+      type,
+      ts: new Date().toISOString(),
+      meta
+    });
 
-    if (error) throw error;
+  if (error) throw error;
 }
 
-/** Convenience — Clock In */
+/* -------------------------------------------------------------
+   SHORTCUTS (used across dashboards)
+------------------------------------------------------------- */
 export async function clockIn(myId, meta = {}) {
-    return addClockEvent(myId, "in", meta);
+  return addClockEvent(myId, "in", meta);
 }
 
-/** Convenience — Clock Out */
 export async function clockOut(myId, meta = {}) {
-    return addClockEvent(myId, "out", meta);
+  return addClockEvent(myId, "out", meta);
 }
 
 /**
- * Convenience — Client showed up on time.
- * Called automatically when the app detects
- * matching location + schedule.
+ * Called when the system detects:
+ * - client + instructor in same location OR
+ * - instructor marks client as arrived
  */
 export async function markClientShow(myId, meta = {}) {
-    return addClockEvent(myId, "client_showed_up", meta);
+  return addClockEvent(myId, "client_showed_up", meta);
 }
 
-/* -------------------------------------------------------
-   FETCH EVENTS (RESPECTING RLS)
-------------------------------------------------------- */
+/* -------------------------------------------------------------
+   FETCH EVENTS VISIBLE TO CURRENT USER (RLS controlled)
+------------------------------------------------------------- */
 
-/**
- * Fetch events visible to the current user.
- * RLS handles:
- *   - Admin/Supervisor: full zone or global
- *   - TL: assigned instructors/clients
- *   - Instructor: only clients
- *   - Client: only themselves
- */
 export async function getVisibleEvents(days = 7) {
-    const since = new Date(Date.now() - days * 86400000).toISOString();
+  const since = new Date(Date.now() - days * 86400000).toISOString();
 
-    const { data, error } = await supabase
-        .from("clock_events")
-        .select("*")
-        .gte("ts", since)
-        .order("ts", { ascending: false });
+  const { data, error } = await supabase
+    .from("clock_events")
+    .select(`
+      *,
+      user:profiles!user_id(name, role, zone)
+    `)
+    .gte("ts", since)
+    .order("ts", { ascending: false });
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return data;
 }
 
-/* -------------------------------------------------------
-   FETCH EVENTS FOR SPECIFIC USER
-   (RLS restricts access)
-------------------------------------------------------- */
-
+/* -------------------------------------------------------------
+   FETCH EVENTS FOR A SPECIFIC USER (RLS applies)
+------------------------------------------------------------- */
 export async function getEventsForUser(userId, days = 7) {
-    const since = new Date(Date.now() - days * 86400000).toISOString();
+  const since = new Date(Date.now() - days * 86400000).toISOString();
 
-    const { data, error } = await supabase
-        .from("clock_events")
-        .select("*")
-        .eq("user_id", userId)
-        .gte("ts", since)
-        .order("ts", { ascending: false });
+  const { data, error } = await supabase
+    .from("clock_events")
+    .select(`
+      *,
+      user:profiles!user_id(name, role, zone)
+    `)
+    .eq("user_id", userId)
+    .gte("ts", since)
+    .order("ts", { ascending: false });
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return data;
 }
 
-/* -------------------------------------------------------
-   REALTIME SUBSCRIPTION
-------------------------------------------------------- */
+/* -------------------------------------------------------------
+   SUPERVISOR-ONLY: Fetch for ALL users
+   (Supervisor is the only role with global access)
+------------------------------------------------------------- */
+export async function getClockEventsForAll(days = 10) {
+  const since = new Date(Date.now() - days * 86400000).toISOString();
 
-/**
- * Realtime feed for clock activity:
- * - clock-in
- * - clock-out
- * - client_showed_up
- *
- * RLS filters which events the subscriber receives.
- */
+  const { data, error } = await supabase
+    .from("clock_events")
+    .select(`
+      *,
+      user:profiles!user_id(name, role, zone)
+    `)
+    .gte("ts", since)
+    .order("ts", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+/* -------------------------------------------------------------
+   REALTIME STREAM (used by Supervisor, TL, Admin dashboards)
+------------------------------------------------------------- */
+
 export function subscribeClockEvents(callback) {
-    return supabase
-        .channel("clock_events_feed")
-        .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "clock_events" },
-            payload => callback(payload.new)
-        )
-        .subscribe();
+  return supabase
+    .channel("clock_events_feed")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "clock_events"
+      },
+      (payload) => callback(payload.new)
+    )
+    .subscribe();
 }

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Redirecting…</title>
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0d0d0d;
+      color: white;
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    p {
+      opacity: 0.75;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <h2>Checking your account…</h2>
+    <p>Please wait a moment.</p>
+  </div>
+
+  <script type="module">
+    import { supabase } from "/js/supabaseClient.js";
+    import { getProfileById } from "/js/sdk/profiles.js";
+
+    async function route() {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // Not logged in → signup/login
+      if (!session) {
+        return location.href = "/html/login.html";
+      }
+
+      const userId = session.user.id;
+      const profile = await getProfileById(userId);
+
+      // No profile exists → must create one
+      if (!profile) {
+        return location.href = "/html/signup.html";
+      }
+
+      // Status check
+      if (profile.status === "pending") {
+        return location.href = "/html/pending.html";
+      }
+
+      // Approved → route to correct dashboard
+      location.href = dashboardPath(profile.role);
+    }
+
+    function dashboardPath(role) {
+      switch (role) {
+        case "Supervisor": return "/html/supervisor.html";
+        case "Admin": return "/html/admin.html";
+        case "Manager": return "/html/manager.html";
+        case "Team Leader": return "/html/team-leader.html";
+        case "Instructor": return "/html/instructor.html";
+        case "Client": return "/html/client.html";
+        default: return "/html/login.html";
+      }
+    }
+
+    route();
+  </script>
+</body>
+</html>

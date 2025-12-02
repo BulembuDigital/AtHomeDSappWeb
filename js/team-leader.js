@@ -1,34 +1,30 @@
 // ============================================================================
-// TEAM LEADER DASHBOARD
-// Zone-restricted. TL sees instructors + clients assigned to their zone.
+// TEAM LEADER DASHBOARD (Updated to new role names + new SDK structure)
 // ============================================================================
 
 // AUTH
 import { getSession, signOut } from "./sdk/auth.js";
 
-// PROFILES (TL + instructors + clients)
+// PROFILES
 import {
   getMyProfile,
-  getProfilesByZone,
-  updateProfile,
 } from "./sdk/profiles.js";
 
-// ASSIGNMENTS (TL → instructors → clients)
+// ASSIGNMENTS
 import {
   getInstructorsForTL,
   getClientsForTL,
   reassignClient,
 } from "./sdk/assignments.js";
 
-// ROUTES (TL personal + instructor routes)
+// ROUTES
 import {
   getRoutesForUser,
   saveRoute,
   deleteRoute,
-  getAllRoutesForZone,
 } from "./sdk/routes.js";
 
-// SCHEDULES (TL creates lessons)
+// SCHEDULES
 import {
   getInstructorAvailability,
   createScheduleSlot,
@@ -42,18 +38,16 @@ import { getMaterialsForZone } from "./sdk/materials.js";
 import {
   sendMessage,
   subscribeMessages,
-  getRecipientsForTL,
 } from "./sdk/messages.js";
 
 // LIVE LOCATIONS
-import { getLiveLocationsStream } from "./sdk/livelocations.js";
+import { getLiveLocationsStream } from "./sdk/liveLocations.js";
 
 // CLOCK EVENTS
-import {
-  getClockedInInstructors,
-} from "./sdk/clockEvents.js";
+import { getClockedInInstructors } from "./sdk/clockEvents.js";
 
-// HELPERS
+
+// Helpers
 const $ = (id) => document.getElementById(id);
 
 // STATE
@@ -61,29 +55,32 @@ let me = null;
 let myId = null;
 let myZone = null;
 
+
 // ============================================================================
 // BOOT
 // ============================================================================
 async function boot() {
   const { userId } = await getSession();
-  if (!userId) return (location.href = "/html/login.html");
+  if (!userId) return location.href = "/html/login.html";
 
   me = await getMyProfile();
-  if (!me || me.role !== "team_leader") {
-    return location.replace("/html/login.html");
-  }
+  if (!me) return location.href = "/html/login.html";
+
   if (me.status !== "approved") {
-    return location.replace("/html/pending.html");
+    return location.href = "/html/pending.html";
+  }
+
+  if (me.role !== "Team Leader") {
+    return location.href = "/html/login.html";
   }
 
   myId = me.id;
-  myZone = me.zone_type;
+  myZone = me.zone;
 
   $("#tlName").textContent = me.name || "Team Leader";
 
   initTabs();
   loadRoster();
-  loadRoutes();
   loadPlanner();
   loadCalendar();
   initMessaging();
@@ -95,26 +92,29 @@ async function boot() {
 
 boot();
 
+
 // ============================================================================
 // TABS
 // ============================================================================
 function initTabs() {
-  const box = $("#tabs");
-  box.onclick = (e) => {
-    const t = e.target.closest(".tab");
-    if (!t) return;
+  const nav = $("#tabs");
 
-    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach((x) => x.classList.remove("active"));
+  nav.onclick = (ev) => {
+    const tab = ev.target.closest(".tab");
+    if (!tab) return;
 
-    t.classList.add("active");
-    document.querySelector(`.panel[data-panel="${t.dataset.tab}"]`)
-      .classList.add("active");
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+
+    tab.classList.add("active");
+    const panel = document.querySelector(`.panel[data-panel="${tab.dataset.tab}"]`);
+    panel.classList.add("active");
   };
 }
 
+
 // ============================================================================
-// ROSTER — Who is clocked in (in my zone)
+// ROSTER (clocked-in instructors)
 // ============================================================================
 async function loadRoster() {
   const box = $("#roster");
@@ -123,24 +123,27 @@ async function loadRoster() {
   const instructors = await getClockedInInstructors(myZone);
 
   if (!instructors.length) {
-    box.innerHTML = `<p class="muted">No instructors currently clocked in.</p>`;
+    box.innerHTML = `<p class="muted">No instructors clocked in.</p>`;
     return;
   }
 
   box.innerHTML = instructors
-    .map((i) => `
+    .map(
+      (i) => `
       <div class="list-row">
         <b>${i.name}</b>
         <span>${i.role}</span>
       </div>
-    `)
+    `
+    )
     .join("");
 }
 
 $("#refreshRoster").onclick = loadRoster;
 
+
 // ============================================================================
-// ROUTE PLANNER (TL personal routes)
+// ROUTE PLANNER (Personal TL routes)
 // ============================================================================
 let plannerMap = null;
 let plannerDraw = null;
@@ -150,24 +153,29 @@ async function loadPlanner() {
   const saved = await getRoutesForUser(myId);
   const list = $("#routesList");
 
-  list.innerHTML = saved.length
-    ? saved.map((r) => `
-        <div class="list-row">
-          <b>${r.title}</b>
-          <button class="btn" data-load="${r.id}">Load</button>
-          <button class="btn" data-del="${r.id}">Delete</button>
-        </div>
-      `).join("")
-    : `<p class="muted">No saved routes.</p>`;
+  if (!saved.length) {
+    list.innerHTML = `<p class="muted">No saved routes.</p>`;
+  } else {
+    list.innerHTML = saved
+      .map(
+        (r) => `
+      <div class="list-row">
+        <b>${r.title}</b>
+        <button class="btn" data-load="${r.id}">Load</button>
+        <button class="btn" data-del="${r.id}">Delete</button>
+      </div>
+    `
+      )
+      .join("");
+  }
 
-  list.onclick = async (e) => {
-    const loadId = e.target.dataset.load;
-    const delId = e.target.dataset.del;
+  list.onclick = async (ev) => {
+    const loadId = ev.target.dataset.load;
+    const delId = ev.target.dataset.del;
 
     if (loadId) {
       const route = saved.find((x) => x.id == loadId);
       if (!route) return;
-
       currentGeo = route.geojson;
       drawRouteOnPlanner();
     }
@@ -183,22 +191,15 @@ async function loadPlanner() {
 
 function initPlannerMap() {
   plannerMap = L.map("planner-map").setView([-29.11, 26.21], 15);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-  }).addTo(plannerMap);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(plannerMap);
 
   plannerDraw = new L.FeatureGroup();
   plannerMap.addLayer(plannerDraw);
 
   const drawControl = new L.Control.Draw({
     edit: { featureGroup: plannerDraw },
-    draw: {
-      polyline: true,
-      polygon: false,
-      rectangle: false,
-      marker: false,
-      circle: false,
-    },
+    draw: { polyline: true, polygon: false, rectangle: false, marker: false, circle: false },
   });
 
   plannerMap.addControl(drawControl);
@@ -213,6 +214,7 @@ function initPlannerMap() {
 function drawRouteOnPlanner() {
   plannerDraw.clearLayers();
   if (!currentGeo) return;
+
   const layer = L.geoJSON(currentGeo);
   plannerDraw.addLayer(layer);
   plannerMap.fitBounds(layer.getBounds());
@@ -220,38 +222,37 @@ function drawRouteOnPlanner() {
 
 $("#saveRoute").onclick = async () => {
   const title = $("#route_title").value.trim();
-  if (!title || !currentGeo) return alert("Missing title or route.");
+  if (!title || !currentGeo) return alert("Missing route title or geometry");
 
   await saveRoute({
     user_id: myId,
     title,
     geojson: currentGeo,
-    zone_type: myZone,
+    zone: myZone,
   });
 
   $("#route_title").value = "";
   await loadPlanner();
 };
 
+
 // ============================================================================
-// CALENDAR (TL creates instructor availability and bookings)
+// CALENDAR (TL adds instructor availability)
 // ============================================================================
 async function loadCalendar() {
-  const instrSelect = $("#instrSelect");
   const instructors = await getInstructorsForTL(myId);
+  const select = $("#instrSelect");
 
-  instrSelect.innerHTML = instructors
-    .map((i) => `<option value="${i.id}">${i.name}</option>`)
-    .join("");
+  select.innerHTML = instructors.map((i) => `<option value="${i.id}">${i.name}</option>`).join("");
 
   $("#addSlot").onclick = async () => {
-    const instr = instrSelect.value;
+    const instr = select.value;
     const date = $("#calDate").value;
     const start = $("#slotStart").value;
     const end = $("#slotEnd").value;
 
     if (!instr || !date || !start || !end) {
-      return alert("Missing fields.");
+      return alert("Please fill all fields.");
     }
 
     await createScheduleSlot({
@@ -259,46 +260,51 @@ async function loadCalendar() {
       date,
       start,
       end,
-      zone_type: myZone,
+      zone: myZone,
     });
 
     alert("Slot added.");
+    loadScheduleList();
   };
 
   loadScheduleList();
 }
 
 async function loadScheduleList() {
+  const sched = await getSchedulesForTL(myId);
   const list = $("#slots");
-  list.innerHTML = "Loading…";
 
-  const scheds = await getSchedulesForTL(myId);
+  if (!sched.length) {
+    list.innerHTML = `<p class="muted">No schedule slots yet.</p>`;
+    return;
+  }
 
-  list.innerHTML = scheds.length
-    ? scheds
-        .map((s) => `
-      <div class="list-row">
-        <b>${s.instructor_name}</b>
-        <span>${s.date} ${s.start} → ${s.end}</span>
-      </div>
-    `)
-        .join("")
-    : `<p class="muted">No schedule slots yet.</p>`;
+  list.innerHTML = sched
+    .map(
+      (s) => `
+    <div class="list-row">
+      <b>${s.instructor_name}</b>
+      <span>${s.date} ${s.start} → ${s.end}</span>
+    </div>
+  `
+    )
+    .join("");
 }
 
+
 // ============================================================================
-// MESSAGING
+// MESSAGING (zone-wide + direct messages)
 // ============================================================================
 function initMessaging() {
-  // Send to individual OR broadcast to zone
+  // Send message
   $("#sendMsg").onclick = async () => {
-    const text = $("#msgBody").value.trim();
-    if (!text) return;
+    const body = $("#msgBody").value.trim();
+    if (!body) return;
 
     await sendMessage({
       sender_id: myId,
       scope: "zone",
-      body: text,
+      body,
       to_zone: myZone,
     });
 
@@ -312,55 +318,60 @@ function initMessaging() {
     el.className = "msg other";
     el.innerHTML = `
       <div>${msg.body}</div>
-      <small>${new Date(msg.created_at).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}</small>
+      <small>${new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>
     `;
     box.appendChild(el);
     box.scrollTop = box.scrollHeight;
   });
 }
 
+
 // ============================================================================
-// LIVE MAP
+// LIVE MAP (instructors in zone)
 // ============================================================================
 function initLiveMap() {
   const map = L.map("tl-map").setView([-29.11, 26.21], 15);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-  }).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
   const markers = {};
 
   getLiveLocationsStream(myZone, (loc) => {
+    const pos = [loc.lat, loc.lng];
+
     if (markers[loc.user_id]) {
-      markers[loc.user_id].setLatLng([loc.lat, loc.lng]);
+      markers[loc.user_id].setLatLng(pos);
     } else {
-      markers[loc.user_id] = L.marker([loc.lat, loc.lng]).addTo(map);
+      markers[loc.user_id] = L.marker(pos).addTo(map);
     }
   });
 }
 
+
 // ============================================================================
-// MATERIALS (zone restricted)
+// MATERIALS
 // ============================================================================
 async function loadMaterials() {
   const mats = await getMaterialsForZone(myZone);
   const box = $("#materialsBox");
 
-  box.innerHTML = mats.length
-    ? mats
-        .map((m) => `
-      <div class="list-row">
-        <b>${m.title}</b>
-        <a class="btn" target="_blank" href="${m.url}">Open</a>
-      </div>
-    `)
-        .join("")
-    : `<p class="muted">No materials yet.</p>`;
+  if (!mats.length) {
+    box.innerHTML = `<p class="muted">No materials available.</p>`;
+    return;
+  }
+
+  box.innerHTML = mats
+    .map(
+      (m) => `
+    <div class="list-row">
+      <b>${m.title}</b>
+      <a href="${m.url}" class="btn" target="_blank">Open</a>
+    </div>
+  `
+    )
+    .join("");
 }
+
 
 // ============================================================================
 // LOGOUT

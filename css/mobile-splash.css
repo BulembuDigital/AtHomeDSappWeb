@@ -1,41 +1,51 @@
 /* ==========================================================
-   MOBILE SPLASH — Minimal, Futuristic, Premium
+   MOBILE SPLASH — Theme-Aware, Premium, Red + Blue Brand
    ========================================================== */
 
-:root {
-  --bg: #05060a;
-  --text: #eef2ff;
-  --accent: #3b82f6; /* refined blue */
-  --glow: #ef4444;   /* subtle red accent */
-  --fade: rgba(255,255,255,0.06);
-  --radius: 20px;
-}
-
+/* Uses global tokens from base.css automatically */
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   background: var(--bg);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  transition: background .25s ease, color .25s ease;
 }
 
-/* Main container */
+/* ----------------------------------------------------------
+   MAIN SPLASH LAYOUT
+----------------------------------------------------------- */
+
 .splash {
   height: 100%;
-  padding: 2.2rem 1.6rem;
+  width: 100%;
+  padding: 2rem 1.4rem;
+
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
 
-  /* subtle vignette + vertical glow wash */
+  /* Brand glow overlays (light & dark friendly) */
   background:
-    radial-gradient(80% 60% at 50% 20%, rgba(59,130,246,0.10), transparent),
-    linear-gradient(to bottom, rgba(255,255,255,0.03), transparent 35%);
+    radial-gradient(
+      80% 60% at 50% 20%,
+      color-mix(in srgb, var(--accent) 25%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      70% 50% at 50% 105%,
+      color-mix(in srgb, var(--accent-2) 18%, transparent),
+      transparent 70%
+    ),
+    var(--bg);
 }
 
-/* Centered content */
+/* ----------------------------------------------------------
+   CENTER LOGO AREA
+----------------------------------------------------------- */
+
 .center {
   flex: 1;
   display: flex;
@@ -44,49 +54,70 @@ html, body {
   flex-direction: column;
 }
 
-/* Refined logo pulse */
+/* Animated logo glow */
 .logo {
   width: 130px;
   height: 130px;
   object-fit: contain;
-  filter: drop-shadow(0 0 18px rgba(59,130,246,0.55));
-  animation: pulse 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 65%, transparent));
+
+  animation: splashPulse 2.4s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes splashPulse {
   0%, 100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 18px rgba(59,130,246,0.55));
+    filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 55%, transparent));
   }
   50% {
-    transform: scale(1.06);
-    filter: drop-shadow(0 0 30px rgba(59,130,246,0.75));
+    transform: scale(1.07);
+    filter: drop-shadow(0 0 28px color-mix(in srgb, var(--accent) 90%, transparent));
   }
 }
 
-/* Brand title */
-.brand {
-  margin-top: 1.2rem;
-  font-size: 1.45rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-align: center;
-  color: var(--text);
+/* ----------------------------------------------------------
+   BRAND TEXT
+----------------------------------------------------------- */
 
-  opacity: 0.95;
+.brand {
+  margin-top: 1.1rem;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--text);
+  text-align: center;
 }
 
-/* Footer */
+/* ----------------------------------------------------------
+   FOOTER
+----------------------------------------------------------- */
+
 .footer {
   font-size: 0.9rem;
   text-align: center;
   opacity: 0.65;
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.6rem;
 }
 
 .footer .glow {
-  color: var(--glow);
+  font-weight: 700;
+  color: var(--accent-2);
   text-shadow:
-    0 0 6px rgba(239,68,68,0.55),
-    0 0 12px rgba(239,68,68,0.40);
+    0 0 6px color-mix(in srgb, var(--accent-2) 70%, transparent),
+    0 0 12px color-mix(in srgb, var(--accent-2) 50%, transparent);
+}
+
+/* ----------------------------------------------------------
+   RESPONSIVE TUNING
+----------------------------------------------------------- */
+
+@media (max-width: 420px) {
+  .logo {
+    width: 110px;
+    height: 110px;
+  }
+
+  .brand {
+    font-size: 1.3rem;
+  }
 }
